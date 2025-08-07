@@ -76,6 +76,7 @@ def main():
     updated_params = {
         "start_year": 2026,
         "RC_TPI": 100*1e-4,
+        "initial_debt_ratio": 1.01727,
         "etr_params": d["etr_params"],
         "mtrx_params": d["mtrx_params"],
         "mtry_params": d["mtry_params"],
