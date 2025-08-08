@@ -32,7 +32,7 @@ def main():
 
     # Directories to save data
     save_dir = os.path.dirname(os.path.realpath(__file__))  # SS_MaxBen/code
-    cur_dir = os.path.dirname()
+    cur_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     base_dir = os.path.join(save_dir, "OUTPUT_BASELINE")
     reform_dir = os.path.join(save_dir, "OUTPUT_SS_MAXBEN")
     tmd_dir = (
