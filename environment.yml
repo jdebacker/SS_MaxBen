@@ -2,7 +2,7 @@ name: ss-maxben-dev
 channels:
 - conda-forge
 dependencies:
-- python>=3.12,<3.13
+- python>=3.11,<3.13
 - numpy
 - numba>=0.54
 - scipy>=1.7.1
@@ -15,7 +15,7 @@ dependencies:
 - distributed>=2.30.1
 - paramtools>=0.20.0
 - taxcalc>=5.2.0
-- statsmodels
+- black
 - requests
 - xlwt
 - statsmodels
@@ -27,5 +27,5 @@ dependencies:
 - pip:
   - openpyxl>=3.1.2
   - pandas-datareader
-  - ogcore==0.14.5
-  - ogusa==0.2.3
+  - ogcore>=0.14.5
+  - ogusa>=0.2.3
