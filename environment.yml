@@ -2,7 +2,7 @@ name: ss-maxben-dev
 channels:
 - conda-forge
 dependencies:
-- python>=3.12,<3.13
+- python>=3.11,<3.13
 - numpy
 - numba>=0.54
 - scipy>=1.7.1
