@@ -28,4 +28,4 @@ dependencies:
   - pandas-datareader
   - ogcore==0.14.5
   - ogusa==0.2.3
-  - taxcalc==5.2.0
+  - taxcalc==5.1.0
