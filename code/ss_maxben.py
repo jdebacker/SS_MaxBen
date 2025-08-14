@@ -42,7 +42,7 @@ def main():
 
     """
     ---------------------------------------------------------------------------
-    Run baseline policy
+    Run baseline pre-OBBBA policy from Tax-Calculator 5.1.0 default
     ---------------------------------------------------------------------------
     """
     # Set up baseline parameterization
