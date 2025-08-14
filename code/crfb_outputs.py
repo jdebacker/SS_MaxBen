@@ -279,3 +279,72 @@ fig.for_each_trace(
 # Add title
 fig.update_layout(title_text="Total Revenue and Spending: CBO vs Baseline")
 fig.show()
+
+
+#%%
+# Plot deficits to GDP (TotalSpend/Y - Rev/Y) for CBO and model baseline
+df["Deficit/Y_base"] = df["TotalSpend/Y_base"] - df["Rev/Y_base"]
+df["Deficit/Y_cbo"] = df["TotalSpend/Y_cbo"] - df["Rev/Y_cbo"]
+fig = px.line(
+    df,
+    x="Year",
+    y=["Deficit/Y_base", "Deficit/Y_cbo"],
+)
+# Update each trace with custom colors and line styles
+for trace in fig.data:
+    trace_name = trace.name
+    # Set line style based on suffix
+    if trace_name.endswith("_base"):
+        line_dash = "dash"
+    elif trace_name.endswith("_cbo"):
+        line_dash = "solid"
+    # Apply the styling
+    trace.update(line=dict(color=color, dash=line_dash))
+# Update y-axis title
+fig.update_yaxes(title_text="Percent of GDP")
+# update Legend labels
+fig.for_each_trace(
+    lambda t: t.update(
+        name=t.name.replace("_base", " (Base)")
+        .replace("_cbo", " (CBO)")
+        .replace("_", " ")
+    )
+)
+# Add title
+fig.update_layout(title_text="Deficits to GDP: CBO vs Baseline")
+fig.show()
+
+# %%
+# plot rD/Y
+fig = px.line(
+    df,
+    x="Year",
+    y=["rD/Y_base", "rD/Y_cbo"],
+)
+# Update each trace with custom colors and line styles
+for trace in fig.data:
+    trace_name = trace.name
+    # Set color based on "Revenues" or "Outlays"
+    if "rD/Y" in trace_name:
+        color = "blue"
+    # Set line style based on suffix
+    if trace_name.endswith("_base"):
+        line_dash = "dash"
+    elif trace_name.endswith("_cbo"):
+        line_dash = "solid"
+    # Apply the styling
+    trace.update(line=dict(color=color, dash=line_dash))
+# Update y-axis title
+fig.update_yaxes(title_text="Percent of GDP")
+# update Legend labels
+fig.for_each_trace(
+    lambda t: t.update(
+        name=t.name.replace("_base", " (Base)")
+        .replace("_cbo", " (CBO)")
+        .replace("_", " ")
+    )
+)
+# Add title
+fig.update_layout(title_text="rD/Y: CBO vs Baseline")
+fig.show()
+# %%
