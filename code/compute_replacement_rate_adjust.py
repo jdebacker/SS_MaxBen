@@ -114,9 +114,9 @@ for i in range(1, 26):
 # append 3 columns with same values as last column
 # this is because we are using OG-Core with J=10
 a = np.append(a, np.tile(a[:, -1].reshape(a.shape[0], 1), (1, 3)), axis=1)
+a = 1 - a
 a_dict = {"replacement_rate_adjust": a.tolist()}
 # do one minus the fraction capped to get the replacement_rate_adjust parameter
-a = 1 - a
 # save to json
 with open("maxben_replacement_rate_adjust.json", "w") as f:
     json.dump(a_dict, f)

@@ -84,7 +84,7 @@ def main():
     # Run model
     start_time = time.time()
     client = Client(n_workers=num_workers, threads_per_worker=1)
-    # runner(p, time_path=True, client=client)
+    runner(p, time_path=True, client=client)
     print("run time = ", time.time() - start_time)
     client.close()
 
