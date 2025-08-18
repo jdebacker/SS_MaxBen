@@ -93,17 +93,6 @@ def main():
     Run reform policy
     ---------------------------------------------------------------------------
     """
-    # Grab a reform JSON file already in Tax-Calculator
-    # In this example the 'reform' is a change to 2017 law (the
-    # baseline policy is tax law in 2018)
-    # reform_url = (
-    #     "github://PSLmodels:Tax-Calculator@master/taxcalc/"
-    #     + "reforms/2017_law.json"
-    # )
-
-    # ref = Calculator.read_json_param_objects(reform_url, None)
-    iit_reform = {}
-
     # create new Specifications object for reform simulation
     p2 = copy.deepcopy(p)
     p2.baseline = False
@@ -111,28 +100,10 @@ def main():
     # Use calibration class to estimate reform tax functions from
     # Tax-Calculator, specifying reform for Tax-Calculator in iit_reform
     client = Client(n_workers=num_workers, threads_per_worker=1)
-    c2 = Calibration(
-        p2,
-        iit_reform=iit_reform,
-        estimate_tax_functions=True,
-        client=client,
-        data=Path(os.path.join(tmd_dir, "tmd.csv.gz")),
-        weights=Path(os.path.join(tmd_dir, "tmd_weights.csv.gz")),
-        gfactors=Path(os.path.join(tmd_dir, "tmd_growfactors.csv")),
-        records_start_year=2021,
-    )
-    # update tax function parameters in Specifications Object
-    d = c2.get_dict()
-    # additional parameters to change
-    updated_params = {
-        "cit_rate": [[0.35]],
-        "etr_params": d["etr_params"],
-        "mtrx_params": d["mtrx_params"],
-        "mtry_params": d["mtry_params"],
-        "mean_income_data": d["mean_income_data"],
-        "frac_tax_payroll": d["frac_tax_payroll"],
-    }
-    p2.update_specifications(updated_params)
+    # Read in replacement rate json
+    with open("maxben_replacement_rate_adjust.json", "r") as f:
+        replacement_rate_adjust = json.load(f)
+    p2.update_specifications(replacement_rate_adjust)
     # Run model
     start_time = time.time()
     runner(p2, time_path=True, client=client)
