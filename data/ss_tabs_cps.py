@@ -1,4 +1,4 @@
-#%%
+# %%
 import pandas as pd
 import os
 from statsmodels.stats.weightstats import DescrStatsW
@@ -7,7 +7,7 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 # puf_path = os.path.join(cur_dir, "..", "PSLFoundation", "DataAssets", "PUF_contract_files" 'puf_2015.csv')
 
 
-#%%
+# %%
 # Read CPS data for 2023
 # Download from: https://www.nber.org/research/data/current-population-survey-cps-supplements-annual-demographic-file
 # Codebook: https://data.nber.org/cps_supp_1/raw/2023/march/asec2023_ddl_pub_full.pdf
@@ -16,9 +16,9 @@ cps_path = os.path.join(cur_dir, "asecpub23csv", "hhpub23.csv")
 df = pd.read_csv(cps_path, dtype=str)
 
 # cast HSSVAL as float
-df['HSSVAL'] = df['HSSVAL'].astype(float)
+df["HSSVAL"] = df["HSSVAL"].astype(float)
 # cast HSUP_WGT as float
-df['HSUP_WGT'] = df['HSUP_WGT'].astype(float)
+df["HSUP_WGT"] = df["HSUP_WGT"].astype(float)
 
 # HSS_YN -- SS income, yes or no
 # HSSVAL -- SS amount
@@ -75,9 +75,13 @@ in Armed Forces
 10 = Group quarters with secondary individuals only
 """
 
-weighted_stats = DescrStatsW(df[['HSSVAL']], weights=df['HSUP_WGT'])
+weighted_stats = DescrStatsW(df[["HSSVAL"]], weights=df["HSUP_WGT"])
 
 # Find fraction of SS benefits that accrue to households with > 100k in benefits
-df_high_benefit = df[df['HSSVAL'].astype(float) > 100000]
-high_income_fraction = (df_high_benefit.HSSVAL * df_high_benefit.HSUP_WGT).sum() / (df.HSSVAL * df.HSUP_WGT).sum()
-print("Fraction of SS benefits to high-benefit households:", high_income_fraction)
+df_high_benefit = df[df["HSSVAL"].astype(float) > 100000]
+high_income_fraction = (
+    df_high_benefit.HSSVAL * df_high_benefit.HSUP_WGT
+).sum() / (df.HSSVAL * df.HSUP_WGT).sum()
+print(
+    "Fraction of SS benefits to high-benefit households:", high_income_fraction
+)
