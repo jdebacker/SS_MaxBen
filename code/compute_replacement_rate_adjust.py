@@ -10,6 +10,7 @@ given the constant benefits growth rate assumption.
 # %%
 import pandas as pd
 import numpy as np
+import json
 import os
 import cps_utils as cpsu
 
@@ -55,10 +56,11 @@ out_dict = {
     "80-90": [],
     "90-99": [],
     "99-100": [],
+    "total_capped_fraction": []
 }
 for y in range(2023, END_YEAR + 1):
     # inflation HSSVAL
-    df.loc[:, "HSSVAL"] *= (1 + BENEFIT_GROWTH_RATE) ** (y - 2023)
+    df.loc[:, "HSSVAL"] *= (1 + BENEFIT_GROWTH_RATE)
 
     df["capped"] = np.where(
         df["married"],
@@ -66,6 +68,7 @@ for y in range(2023, END_YEAR + 1):
         np.maximum(df["HSSVAL"] - BENEFIT_CAP_SINGLES, 0),
     )
     total_benefits = (df.HSSVAL * df.HSUP_WGT).sum()
+    total_capped = (df["capped"] * df["HSUP_WGT"]).sum()
 
     # group by percentile group and sum total HSSVAL and capped
     df_grouped = (
@@ -94,12 +97,30 @@ for y in range(2023, END_YEAR + 1):
                 "fraction_capped"
             ].values[0]
         )
+    out_dict["total_capped_fraction"].append(total_capped / total_benefits)
 
 # %%
 # turn to df
 out_df = pd.DataFrame.from_dict(out_dict)
+# find year where 25% of benefits are capped
+year_25_capped = out_df[out_df["total_capped_fraction"] >= 0.25]["year"].min()
+print("25% of benefits are capped in year:", year_25_capped)
 
-# %%
+# save to JSON for use in OG-USA calibration of replacement_rate_adjust
+a = out_df[out_df["year"] <= year_25_capped][["0-25", "25-50","50-70", "70-80", "80-90", "90-99", "99-100"]].values
+# add to a: have values linearly go back down to zero over next 25 years
+for i in range(1, 26):
+    a = np.append(a, (a[-1, :] * (1 - i / 25)).reshape(1, 7), axis=0)
+# append 3 columns with same values as last column
+# this is because we are using OG-Core with J=10
+a = np.append(a, np.tile(a[:, -1].reshape(a.shape[0], 1), (1, 3)), axis=1)
+a_dict = {"replacement_rate_adjust": a.tolist()}
+# do one minus the fraction capped to get the replacement_rate_adjust parameter
+a = 1 - a
+# save to json
+with open("maxben_replacement_rate_adjust.json", "w") as f:
+    json.dump(a_dict, f)
+
 # plot by year and percentile
 import plotly.express as px
 
