@@ -281,7 +281,7 @@ fig.update_layout(title_text="Total Revenue and Spending: CBO vs Baseline")
 fig.show()
 
 
-#%%
+# %%
 # Plot deficits to GDP (TotalSpend/Y - Rev/Y) for CBO and model baseline
 df["Deficit/Y_base"] = df["TotalSpend/Y_base"] - df["Rev/Y_base"]
 df["Deficit/Y_cbo"] = df["TotalSpend/Y_cbo"] - df["Rev/Y_cbo"]
