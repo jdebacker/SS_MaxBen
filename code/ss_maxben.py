@@ -39,7 +39,7 @@ def main():
     # Directories to save data
     save_dir = os.path.dirname(os.path.realpath(__file__))  # SS_MaxBen/code
     cur_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    base_mar2025_dir = os.path.join(save_dir, "OUTPUT_BASELINE_MAR2025")
+    base_postOBBBA_dir = os.path.join(save_dir, "OUTPUT_BASELINE_POSTOBBBA")
     reform_dir = os.path.join(save_dir, "OUTPUT_SS_MAXBEN")
     tmd_dir = (
         "/Users/richardevans/Docs/Economics/OSE/microsim/" +
@@ -52,15 +52,15 @@ def main():
 
     """
     ---------------------------------------------------------------------------
-    Run baseline pre-OBBBA policy from Tax-Calculator 5.1.0 default
+    Run baseline post-OBBBA policy from Tax-Calculator 5.2.0 default
     ---------------------------------------------------------------------------
     """
     # Set up baseline parameterization
     p = Specifications(
         baseline=True,
         num_workers=num_workers,
-        baseline_dir=base_mar2025_dir,
-        output_base=base_mar2025_dir,
+        baseline_dir=base_postOBBBA_dir,
+        output_base=base_postOBBBA_dir,
     )
     # Update parameters for baseline from default json file
     with importlib.resources.open_text(
@@ -110,7 +110,7 @@ def main():
             6.053, 5.996, 5.914, 5.816, 5.731, 5.637, 5.54, 5.453, 5.365,
             5.284, 5.212, 5.16, 5.126, 5.11, 5.11, 5.11, 5.11, 5.11, 5.11,
             5.11, 5.11
-        ]) / 100,
+        ]) * 0.99 / 100,
         "cit_rate": [
             [0.260], [0.255], [0.250], [0.245], [0.240], [0.235], [0.230]
         ],
