@@ -1,6 +1,6 @@
 """
-This Python script must be run in the ss-maxben-dev Conda environment, which
-can be created using the provided environment.yml file.
+This Python script must be run in the ss-maxben-preOBBBA Conda environment,
+which can be created using the provided environment_preOBBBA.yml file.
 """
 
 import numpy as np
