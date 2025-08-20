@@ -1,4 +1,4 @@
-name: ss-maxben-dev
+name: ss-maxben-preOBBBA
 channels:
 - conda-forge
 dependencies:
@@ -27,5 +27,5 @@ dependencies:
   - openpyxl>=3.1.2
   - pandas-datareader
   - ogcore==0.14.6
-  - ogusa==0.2.4
-  - taxcalc==5.2.0
+  - git+https://github.com/rickecon/OG-USA.git@ssmaxben#egg=ogusa
+  - taxcalc==5.1.0
