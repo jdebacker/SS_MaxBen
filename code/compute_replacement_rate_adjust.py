@@ -43,9 +43,10 @@ df = cpsu.add_weighted_percentile_groups(df)
 # Find fraction of SS benefits that accrue to households above a benefit cap
 # CONSTANTS
 BENEFIT_CAP_COUPLES = 100_000  # Nominal cap on benefits
-BENEFIT_CAP_SINGLES = 67_000  # Nominal cap on benefits
+BENEFIT_CAP_SINGLES = 50_000  # Nominal cap on benefits
 BENEFIT_GROWTH_RATE = 0.04  # Assumed annual growth rate in nominal benefits
 END_YEAR = 2100  # final year to grow out to
+PHASE_OUT = 100  # number of years to phase out replacement rate adjustment
 
 out_dict = {
     "year": [],
@@ -108,9 +109,10 @@ print("25% of benefits are capped in year:", year_25_capped)
 
 # save to JSON for use in OG-USA calibration of replacement_rate_adjust
 a = out_df[out_df["year"] <= year_25_capped][["0-25", "25-50","50-70", "70-80", "80-90", "90-99", "99-100"]].values
-# add to a: have values linearly go back down to zero over next 25 years
-for i in range(1, 26):
-    a = np.append(a, (a[-1, :] * (1 - i / 25)).reshape(1, 7), axis=0)
+# add to a: have values linearly go back down to zero over next PHASE_OUT years
+PHASE_OUT = 25
+for i in range(1, PHASE_OUT + 1):
+    a = np.append(a, (a[-1, :] * (1 - i / PHASE_OUT)).reshape(1, 7), axis=0)
 # append 3 columns with same values as last column
 # this is because we are using OG-Core with J=10
 a = np.append(a, np.tile(a[:, -1].reshape(a.shape[0], 1), (1, 3)), axis=1)
@@ -118,7 +120,7 @@ a = 1 - a
 a_dict = {"replacement_rate_adjust": a.tolist()}
 # do one minus the fraction capped to get the replacement_rate_adjust parameter
 # save to json
-with open("maxben_replacement_rate_adjust.json", "w") as f:
+with open("maxben_replacement_rate_adjust_100k50k_25pct_100yrs.json", "w") as f:
     json.dump(a_dict, f)
 
 # plot by year and percentile
