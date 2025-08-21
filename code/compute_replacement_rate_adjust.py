@@ -45,9 +45,14 @@ df = cpsu.add_weighted_percentile_groups(df)
 BENEFIT_CAP_COUPLES = 100_000  # Nominal cap on benefits
 BENEFIT_CAP_SINGLES = 50_000  # Nominal cap on benefits
 BENEFIT_GROWTH_RATE = 0.04  # Assumed annual growth rate in nominal benefits
+# this growth rate should be come combination of inflation for COLA adjustments
+# and real wage growth for new beneficiaries
 END_YEAR = 2100  # final year to grow out to
-PHASE_OUT_RATE = 0.02  # number of years to phase out replacement rate adjustment
+PHASE_OUT_RATE = (
+    0.02  # number of years to phase out replacement rate adjustment
+)
 PHASE_OUT_YEARS = 150
+BENEFIT_TRIGGER_PCT = 0.25
 
 out_dict = {
     "year": [],
@@ -58,11 +63,11 @@ out_dict = {
     "80-90": [],
     "90-99": [],
     "99-100": [],
-    "total_capped_fraction": []
+    "total_capped_fraction": [],
 }
 for y in range(2023, END_YEAR + 1):
     # inflation HSSVAL
-    df.loc[:, "HSSVAL"] *= (1 + BENEFIT_GROWTH_RATE)
+    df.loc[:, "HSSVAL"] *= 1 + BENEFIT_GROWTH_RATE
 
     df["capped"] = np.where(
         df["married"],
@@ -104,12 +109,14 @@ for y in range(2023, END_YEAR + 1):
 # %%
 # turn to df
 out_df = pd.DataFrame.from_dict(out_dict)
-# find year where 25% of benefits are capped
-year_25_capped = out_df[out_df["total_capped_fraction"] >= 0.25]["year"].min()
-print("25% of benefits are capped in year:", year_25_capped)
+# find year where Trigger amount of benefits are capped
+year_cap_trigger = out_df[out_df["total_capped_fraction"] >= BENEFIT_TRIGGER_PCT]["year"].min()
+print("25% of benefits are capped in year:", year_cap_trigger)
 
 # save to JSON for use in OG-USA calibration of replacement_rate_adjust
-a = out_df[out_df["year"] <= year_25_capped][["0-25", "25-50","50-70", "70-80", "80-90", "90-99", "99-100"]].values
+a = out_df[out_df["year"] <= year_cap_trigger][
+    ["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"]
+].values
 # add to a: have values linearly go back down to zero over next PHASE_OUT years
 # for i in range(1, PHASE_OUT + 1):
 #     a = np.append(a, (a[-1, :] * (1 - i / PHASE_OUT)).reshape(1, 7), axis=0)
@@ -126,7 +133,9 @@ a = 1 - a
 a_dict = {"replacement_rate_adjust": a.tolist()}
 # do one minus the fraction capped to get the replacement_rate_adjust parameter
 # save to json
-with open("maxben_replacement_rate_adjust_100k50k_25pct_100yrs.json", "w") as f:
+with open(
+    "maxben_replacement_rate_adjust_100k50k_25pct_100yrs.json", "w"
+) as f:
     json.dump(a_dict, f)
 
 # plot by year and percentile
@@ -142,7 +151,10 @@ fig.show()
 
 # %%
 # put a_dict in a dataframe with columns "percentile" and "replacement_rate_adjust"
-a_df = pd.DataFrame(np.array(a_dict["replacement_rate_adjust"])[:, :7], columns=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"])
+a_df = pd.DataFrame(
+    np.array(a_dict["replacement_rate_adjust"])[:, :7],
+    columns=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
+)
 # make index a year variable
 a_df["year"] = np.arange(2023, a_df.shape[0] + 2023)
 fig = px.line(
