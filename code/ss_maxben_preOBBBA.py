@@ -114,7 +114,7 @@ def main():
         "cit_rate": [
             [0.260], [0.255], [0.250], [0.245], [0.240], [0.235], [0.230]
         ],
-        "debt_ratio_ss": 1.65,
+        "debt_ratio_ss": 1.70,
         "etr_params": etr_list,
         "mtrx_params": mtrx_list,
         "mtry_params": mtry_list,
