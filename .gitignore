@@ -192,7 +192,6 @@ cython_debug/
 .DS_Store
 *code/*/micro_data_baseline.pkl
 *code/*/micro_data_policy.pkl
-*code/*/model_params.pkl
 *code/*/TxFuncEst_baseline.pkl
 *code/*/TxFuncEst_policy.pkl
 *code/OUTPUT_BASELINE/OUTPUT/*
