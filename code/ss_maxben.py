@@ -40,15 +40,15 @@ def main():
     save_dir = os.path.dirname(os.path.realpath(__file__))  # SS_MaxBen/code
     main_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     base_dir_postOBBBA = os.path.join(save_dir, "OUTPUT_BASELINE_POSTOBBBA")
-    reform_dir = os.path.join(save_dir, "OUTPUT_SS_MAXBEN_50_smooth")
+    reform_dir = os.path.join(save_dir, "OUTPUT_SS_MAXBEN_10pct_trigger_smooth")
     json_dir = os.path.join(main_dir, "json")
     # tmd_dir = (
     #     "/Users/richardevans/Docs/Economics/OSE/microsim/" +
     #     "tax-microdata-benchmarking/tmd/storage/output"
     # )
     tmd_dir = (
-        "/Users/jason.debacker/repos/tax-microdata-benchmarking/" +
-        "tmd/storage/output"
+        "/Users/jason.debacker/repos/tax-microdata-benchmarking/"
+        + "tmd/storage/output"
     )
 
     """
@@ -89,9 +89,9 @@ def main():
     etr_arr = np.array(d["etr_params"], dtype=np.float64)
     mtrx_arr = np.array(d["mtrx_params"], dtype=np.float64)
     mtry_arr = np.array(d["mtry_params"], dtype=np.float64)
-    etr_arr[:, :, 0] *= (1.0 - pct)
-    mtrx_arr[:, :, 0] *= (1.0 - pct)
-    mtry_arr[:, :, 0] *= (1.0 - pct)
+    etr_arr[:, :, 0] *= 1.0 - pct
+    mtrx_arr[:, :, 0] *= 1.0 - pct
+    mtry_arr[:, :, 0] *= 1.0 - pct
     etr_list = etr_arr.tolist()
     mtrx_list = mtrx_arr.tolist()
     mtry_list = mtry_arr.tolist()
@@ -102,19 +102,76 @@ def main():
         "start_year": 2026,
         "RC_TPI": 100 * 1e-4,
         "initial_debt_ratio": 1.01727,
-        "alpha_T": np.array([
-            8.685, 8.713, 8.519, 8.82, 8.804, 8.839, 8.915, 8.974, 9.022,
-            9.109, 9.184, 9.256, 9.332, 9.405, 9.47, 9.537, 9.597, 9.652,
-            9.700, 9.744, 9.787, 9.823, 9.858, 9.889, 9.917, 9.944, 9.967,
-            9.986, 10.001, 10.017
-        ]) / 100,
-        "alpha_G": np.array([
-            6.053, 5.996, 5.914, 5.816, 5.731, 5.637, 5.54, 5.453, 5.365,
-            5.284, 5.212, 5.16, 5.126, 5.11, 5.11, 5.11, 5.11, 5.11, 5.11,
-            5.11, 5.11
-        ]) * 0.975 / 100,
+        "alpha_T": np.array(
+            [
+                8.685,
+                8.713,
+                8.519,
+                8.82,
+                8.804,
+                8.839,
+                8.915,
+                8.974,
+                9.022,
+                9.109,
+                9.184,
+                9.256,
+                9.332,
+                9.405,
+                9.47,
+                9.537,
+                9.597,
+                9.652,
+                9.700,
+                9.744,
+                9.787,
+                9.823,
+                9.858,
+                9.889,
+                9.917,
+                9.944,
+                9.967,
+                9.986,
+                10.001,
+                10.017,
+            ]
+        )
+        / 100,
+        "alpha_G": np.array(
+            [
+                6.053,
+                5.996,
+                5.914,
+                5.816,
+                5.731,
+                5.637,
+                5.54,
+                5.453,
+                5.365,
+                5.284,
+                5.212,
+                5.16,
+                5.126,
+                5.11,
+                5.11,
+                5.11,
+                5.11,
+                5.11,
+                5.11,
+                5.11,
+                5.11,
+            ]
+        )
+        * 0.975
+        / 100,
         "cit_rate": [
-            [0.260], [0.255], [0.250], [0.245], [0.240], [0.235], [0.230]
+            [0.260],
+            [0.255],
+            [0.250],
+            [0.245],
+            [0.240],
+            [0.235],
+            [0.230],
         ],
         "debt_ratio_ss": 1.90,
         "etr_params": etr_list,
@@ -127,7 +184,7 @@ def main():
     # Run model
     start_time = time.time()
     client = Client(n_workers=num_workers, threads_per_worker=1)
-    runner(p, time_path=True, client=client)
+    # runner(p, time_path=True, client=client)
     print("run time = ", time.time() - start_time)
     client.close()
 
@@ -147,8 +204,9 @@ def main():
     with open(
         os.path.join(
             json_dir,
-            "maxben_replacement_rate_adjust_100k50k_25pct_100yrs.json"
-        ), "r"
+            "maxben_replacement_rate_adjust_100k50k_10pct_150yrs.json",
+        ),
+        "r",
     ) as f:
         replacement_rate_adjust = json.load(f)
     p2.update_specifications(replacement_rate_adjust)
@@ -207,11 +265,7 @@ def main():
 
     print("Percentage changes in aggregates:", ans)
     # save percentage change output to csv file
-    ans.to_csv(
-        os.path.join(
-            reform_dir, "plots_tables", "output.csv"
-        )
-    )
+    ans.to_csv(os.path.join(reform_dir, "plots_tables", "output.csv"))
 
 
 if __name__ == "__main__":

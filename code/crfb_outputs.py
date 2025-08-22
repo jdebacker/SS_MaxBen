@@ -405,7 +405,13 @@ df["SSTF_Outlays_norm"] = df["SSTF_Outlays_cbo"] - (
 )
 
 # Keep just year and columns with SSTF prefix
-df = df[[col for col in df.columns if col.startswith("Year") or col.startswith("SSTF")]]
+df = df[
+    [
+        col
+        for col in df.columns
+        if col.startswith("Year") or col.startswith("SSTF")
+    ]
+]
 # plot cbo and model output
 fig = px.line(
     df,

@@ -52,7 +52,7 @@ PHASE_OUT_RATE = (
     0.02  # number of years to phase out replacement rate adjustment
 )
 PHASE_OUT_YEARS = 150
-BENEFIT_TRIGGER_PCT = 0.25
+BENEFIT_TRIGGER_PCT = 0.10
 
 out_dict = {
     "year": [],
@@ -110,7 +110,9 @@ for y in range(2023, END_YEAR + 1):
 # turn to df
 out_df = pd.DataFrame.from_dict(out_dict)
 # find year where Trigger amount of benefits are capped
-year_cap_trigger = out_df[out_df["total_capped_fraction"] >= BENEFIT_TRIGGER_PCT]["year"].min()
+year_cap_trigger = out_df[
+    out_df["total_capped_fraction"] >= BENEFIT_TRIGGER_PCT
+]["year"].min()
 print("25% of benefits are capped in year:", year_cap_trigger)
 
 # save to JSON for use in OG-USA calibration of replacement_rate_adjust
@@ -134,7 +136,7 @@ a_dict = {"replacement_rate_adjust": a.tolist()}
 # do one minus the fraction capped to get the replacement_rate_adjust parameter
 # save to json
 with open(
-    "maxben_replacement_rate_adjust_100k50k_25pct_100yrs.json", "w"
+    f"maxben_replacement_rate_adjust_100k50k_{BENEFIT_TRIGGER_PCT * 100:.0f}pct_{PHASE_OUT_YEARS}yrs.json", "w"
 ) as f:
     json.dump(a_dict, f)
 
@@ -151,6 +153,16 @@ fig.show()
 
 # %%
 # put a_dict in a dataframe with columns "percentile" and "replacement_rate_adjust"
+
+# read in and plot replacement rates
+with open(
+    os.path.join(
+        cur_dir,
+        "maxben_replacement_rate_adjust_100k50k_25pct_100yrs.json",
+    ),
+    "r",
+) as f:
+    a_dict = json.load(f)
 a_df = pd.DataFrame(
     np.array(a_dict["replacement_rate_adjust"])[:, :7],
     columns=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
@@ -164,5 +176,24 @@ fig = px.line(
     title="Fraction of SS Benefits Exceeding Cap by Percentile",
 )
 fig.show()
+
+# %%
+import ogcore
+# Check that get the same from the replacement rates in the parameters object in the reform
+p = ogcore.utils.safe_read_pickle("/Users/jason.debacker/repos/SS_MaxBen/code/OUTPUT_SS_MAXBEN_50_smooth/p_with_maxben_replacement_rate_adjust_100k50k_25pct_100yrs.pkl")
+a_df = pd.DataFrame(
+    np.array(p.replacement_rate_adjust[:, :7]),
+    columns=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
+)
+# make index a year variable
+a_df["year"] = np.arange(2023, a_df.shape[0] + 2023)
+fig = px.line(
+    a_df,
+    x="year",
+    y=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
+    title="Fraction of SS Benefits Exceeding Cap by Percentile",
+)
+fig.show()
+
 
 # %%
