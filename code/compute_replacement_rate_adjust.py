@@ -16,7 +16,7 @@ import cps_utils as cpsu
 
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-# Read CPS data for 2023
+# Read CPS data for 2023  #NOTE: Consider using HRS data in the future
 # Download from: https://www.nber.org/research/data/current-population-survey-cps-supplements-annual-demographic-file
 # Codebook: https://data.nber.org/cps_supp_1/raw/2023/march/asec2023_ddl_pub_full.pdf
 cps_path = os.path.join(cur_dir, "..", "data", "asecpub23csv", "hhpub23.csv")
@@ -44,7 +44,8 @@ df = cpsu.add_weighted_percentile_groups(df)
 # CONSTANTS
 BENEFIT_CAP_COUPLES = 100_000  # Nominal cap on benefits
 BENEFIT_CAP_SINGLES = 50_000  # Nominal cap on benefits
-BENEFIT_GROWTH_RATE = 0.04  # Assumed annual growth rate in nominal benefits
+INFLATION_RATE = 0.02  # Assumed inflation rate, affects benefit growth
+WAGE_GROWTH_RATE = 0.04  # Assumed annual growth rate wages, applies to AIME and the benefit cap (after trigger)
 # this growth rate should be come combination of inflation for COLA adjustments
 # and real wage growth for new beneficiaries
 END_YEAR = 2100  # final year to grow out to
@@ -65,16 +66,65 @@ out_dict = {
     "99-100": [],
     "total_capped_fraction": [],
 }
+
+# while loop to see when new benefits hit trigger
+fraction_capped = 0.0
+y = 2023
+df_temp = df.copy()
+while fraction_capped < BENEFIT_TRIGGER_PCT:
+    # inflation HSSVAL
+    df_temp.loc[:, "HSSVAL"] *= 1 + WAGE_GROWTH_RATE
+    df_temp["capped"] = np.where(
+        df_temp["married"],
+        np.maximum(df_temp["HSSVAL"] - BENEFIT_CAP_COUPLES, 0),
+        np.maximum(df_temp["HSSVAL"] - BENEFIT_CAP_SINGLES, 0),
+    )
+    total_benefits = (df_temp.HSSVAL * df_temp.HSUP_WGT).sum()
+    total_capped = (df_temp["capped"] * df_temp["HSUP_WGT"]).sum()
+    # group by percentile group and sum total HSSVAL and capped
+    df_grouped = (
+        df_temp.groupby("pctile_group")[
+            ["pctile_group", "HSSVAL", "HSUP_WGT", "capped"]
+        ]
+        .apply(
+            lambda x: pd.Series(
+                {
+                    "total_SS": cpsu.weighted_sum(x["HSSVAL"], x["HSUP_WGT"]),
+                    "capped_SS": cpsu.weighted_sum(x["capped"], x["HSUP_WGT"]),
+                }
+            )
+        )
+        .reset_index()
+    )
+    df_grouped["fraction_capped"] = (
+        df_grouped["capped_SS"] / df_grouped["total_SS"]
+    )
+    fraction_capped = total_capped / total_benefits
+    y += 1
+
+trigger_year = y
+print(f"{BENEFIT_TRIGGER_PCT * 100:.0f} pct trigger happens in {trigger_year}")
+
+# No loop back over all years, noting trigger year
+cap_singles = BENEFIT_CAP_SINGLES
+cap_couples = BENEFIT_CAP_COUPLES
 for y in range(2023, END_YEAR + 1):
     # inflation HSSVAL
-    df.loc[:, "HSSVAL"] *= 1 + BENEFIT_GROWTH_RATE
+    # Assume total (not new claimants) benefits grow at average of inflation and wage growth
+    df.loc[:, "HSSVAL"] *= (1 + (WAGE_GROWTH_RATE + INFLATION_RATE) / 2)
 
+    # after trigger year, grow cap at wage index
+    if y > trigger_year:
+        cap_singles *= (1 + WAGE_GROWTH_RATE)
+        cap_couples *= (1 + WAGE_GROWTH_RATE)
+
+    # Compute benefits and capped amount
     df["capped"] = np.where(
         df["married"],
-        np.maximum(df["HSSVAL"] - BENEFIT_CAP_COUPLES, 0),
-        np.maximum(df["HSSVAL"] - BENEFIT_CAP_SINGLES, 0),
+        np.maximum(df["HSSVAL"] - cap_couples, 0),
+        np.maximum(df["HSSVAL"] - cap_singles, 0),
     )
-    total_benefits = (df.HSSVAL * df.HSUP_WGT).sum()
+    total_uncapped_benefits = (df.HSSVAL * df.HSUP_WGT).sum()
     total_capped = (df["capped"] * df["HSUP_WGT"]).sum()
 
     # group by percentile group and sum total HSSVAL and capped
@@ -104,39 +154,34 @@ for y in range(2023, END_YEAR + 1):
                 "fraction_capped"
             ].values[0]
         )
-    out_dict["total_capped_fraction"].append(total_capped / total_benefits)
+    out_dict["total_capped_fraction"].append(total_capped / total_uncapped_benefits)
 
 # %%
 # turn to df
 out_df = pd.DataFrame.from_dict(out_dict)
-# find year where Trigger amount of benefits are capped
-year_cap_trigger = out_df[
-    out_df["total_capped_fraction"] >= BENEFIT_TRIGGER_PCT
-]["year"].min()
-print("25% of benefits are capped in year:", year_cap_trigger)
 
 # save to JSON for use in OG-USA calibration of replacement_rate_adjust
-a = out_df[out_df["year"] <= year_cap_trigger][
+a = out_df[
     ["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"]
 ].values
 # add to a: have values linearly go back down to zero over next PHASE_OUT years
 # for i in range(1, PHASE_OUT + 1):
 #     a = np.append(a, (a[-1, :] * (1 - i / PHASE_OUT)).reshape(1, 7), axis=0)
 # Smooth phase out (not linear)
-for i in range(1, PHASE_OUT_YEARS + 1):
-    a = np.append(a, (a[-1, :] / (1 + PHASE_OUT_RATE)).reshape(1, 7), axis=0)
+# for i in range(1, PHASE_OUT_YEARS + 1):
+#     a = np.append(a, (a[-1, :] / (1 + PHASE_OUT_RATE)).reshape(1, 7), axis=0)
 
 # append 3 columns with same values as last column
 # this is because we are using OG-Core with J=10
 a = np.append(a, np.tile(a[:, -1].reshape(a.shape[0], 1), (1, 3)), axis=1)
 # appends one row of all 0 to make sure back to SS value
-a = np.append(a, np.zeros((1, 10)), axis=0)
+# a = np.append(a, np.zeros((1, 10)), axis=0)
 a = 1 - a
 a_dict = {"replacement_rate_adjust": a.tolist()}
 # do one minus the fraction capped to get the replacement_rate_adjust parameter
 # save to json
 with open(
-    f"maxben_replacement_rate_adjust_100k50k_{BENEFIT_TRIGGER_PCT * 100:.0f}pct_{PHASE_OUT_YEARS}yrs.json", "w"
+    f"maxben_replacement_rate_adjust_100k50k_{BENEFIT_TRIGGER_PCT * 100:.0f}pct.json", "w"
 ) as f:
     json.dump(a_dict, f)
 
