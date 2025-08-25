@@ -403,7 +403,19 @@ df["SSTF_Revenues_norm"] = df["SSTF_Revenues_cbo"] - (
 df["SSTF_Outlays_norm"] = df["SSTF_Outlays_cbo"] - (
     df["SSTF_Outlays_base"] - df["SSTF_Outlays_reform"]
 )
-
+# Keep only the year column and columns with the prefix "SSTF"
+df = df[
+    [
+        col
+        for col in df.columns
+        if col.startswith("Year") or col.startswith("SSTF")
+    ]
+]
+# Rename _norm columns
+df.rename(columns={"SSTF_Revenues_norm": "SSTF Revenues, Cap",
+                   "SSTF_Outlays_norm": "SSTF Outlays, Cap"}, inplace=True)
+df.rename(columns={"SSTF_Revenues_cbo": "SSTF Revenues, Current Law",
+                   "SSTF_Outlays_cbo": "SSTF Outlays, Current Law"}, inplace=True)
 # Keep just year and columns with SSTF prefix
 df = df[
     [
@@ -417,10 +429,10 @@ fig = px.line(
     df,
     x="Year",
     y=[
-        "SSTF_Revenues_norm",
-        "SSTF_Outlays_norm",
-        "SSTF_Revenues_cbo",
-        "SSTF_Outlays_cbo",
+        "SSTF Revenues, Cap",
+        "SSTF Outlays, Cap",
+        "SSTF Revenues, Current Law",
+        "SSTF Outlays, Current Law",
     ],
 )
 # Update each trace with custom colors and line styles
@@ -432,22 +444,28 @@ for trace in fig.data:
     elif "Outlays" in trace_name:
         color = "red"
     # Set line style based on suffix
-    if trace_name.endswith("_norm"):
+    if trace_name.endswith(" Cap"):
         line_dash = "dash"
-    elif trace_name.endswith("_cbo"):
+    elif trace_name.endswith("Current Law"):
         line_dash = "solid"
     # Apply the styling
     trace.update(line=dict(color=color, dash=line_dash))
 # Update y-axis title
 fig.update_yaxes(title_text="Percent of GDP")
-# update Legend labels
-fig.for_each_trace(
-    lambda t: t.update(
-        name=t.name.replace("_reform", " (Cap Benefits)")
-        .replace("_cbo", " (CBO)")
-        .replace("SSTF_", "SSTF ")
-    )
+# Change the aspect ratio of the figure
+fig.update_layout(
+    autosize=False,
+    width=1000,
+    height=500,
 )
+# update Legend labels
+# fig.for_each_trace(
+#     lambda t: t.update(
+#         name=t.name.replace("_reform", " (Cap Benefits)")
+#         .replace("_cbo", " (CBO)")
+#         .replace("SSTF_", "SSTF ")
+#     )
+# )
 # Add title
 fig.update_layout(title_text="Social Security Trust Fund Revenues and Outlays")
 fig.show()
