@@ -21,8 +21,16 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 # Codebook: https://data.nber.org/cps_supp_1/raw/2023/march/asec2023_ddl_pub_full.pdf
 cps_path = os.path.join(cur_dir, "..", "data", "asecpub23csv", "hhpub23.csv")
 df = pd.read_csv(cps_path, dtype=str)
+# Also read in person file to get age
+p_cps_path = os.path.join(cur_dir, "..", "data", "asecpub23csv", "pppub23.csv")
+p_df = pd.read_csv(p_cps_path, dtype=str)
 # keep just variables of interest
-df = df[["HSSVAL", "HSUP_WGT", "HRHTYPE"]]
+df = df[["HSSVAL", "HSUP_WGT", "HRHTYPE", "H_SEQ"]]
+p_df = p_df[["A_AGE", "PH_SEQ"]]
+# in p_df, just keep oldest person in each household
+p_df = p_df.loc[p_df.groupby("PH_SEQ")["A_AGE"].idxmax()]
+# Merge person data with household data
+df = df.merge(p_df, left_on="H_SEQ", right_on="PH_SEQ", how="left")
 
 # cast HSSVAL as float
 df["HSSVAL"] = df["HSSVAL"].astype(float)
@@ -70,48 +78,37 @@ out_dict = {
 # while loop to see when new benefits hit trigger
 fraction_capped = 0.0
 y = 2023
-df_temp = df.copy()
+# Create df of new beneficiaries: proxy by aged 70 and under
+df_new = df[df["A_AGE"].astype(int) <= 70].copy()
 while fraction_capped < BENEFIT_TRIGGER_PCT:
-    # inflation HSSVAL
-    df_temp.loc[:, "HSSVAL"] *= 1 + WAGE_GROWTH_RATE
-    df_temp["capped"] = np.where(
-        df_temp["married"],
-        np.maximum(df_temp["HSSVAL"] - BENEFIT_CAP_COUPLES, 0),
-        np.maximum(df_temp["HSSVAL"] - BENEFIT_CAP_SINGLES, 0),
+    # HSSVAL for new beneficiaries grows at the wage rate
+    df_new.loc[:, "HSSVAL"] *= 1 + WAGE_GROWTH_RATE
+    df_new["capped"] = np.where(
+        df_new["married"],
+        np.maximum(df_new["HSSVAL"] - BENEFIT_CAP_COUPLES, 0),
+        np.maximum(df_new["HSSVAL"] - BENEFIT_CAP_SINGLES, 0),
     )
-    total_benefits = (df_temp.HSSVAL * df_temp.HSUP_WGT).sum()
-    total_capped = (df_temp["capped"] * df_temp["HSUP_WGT"]).sum()
-    # group by percentile group and sum total HSSVAL and capped
-    df_grouped = (
-        df_temp.groupby("pctile_group")[
-            ["pctile_group", "HSSVAL", "HSUP_WGT", "capped"]
-        ]
-        .apply(
-            lambda x: pd.Series(
-                {
-                    "total_SS": cpsu.weighted_sum(x["HSSVAL"], x["HSUP_WGT"]),
-                    "capped_SS": cpsu.weighted_sum(x["capped"], x["HSUP_WGT"]),
-                }
-            )
-        )
-        .reset_index()
-    )
-    df_grouped["fraction_capped"] = (
-        df_grouped["capped_SS"] / df_grouped["total_SS"]
-    )
+    total_benefits = (df_new.HSSVAL * df_new.HSUP_WGT).sum()
+    total_capped = (df_new["capped"] * df_new["HSUP_WGT"]).sum()
     fraction_capped = total_capped / total_benefits
     y += 1
 
 trigger_year = y
 print(f"{BENEFIT_TRIGGER_PCT * 100:.0f} pct trigger happens in {trigger_year}")
 
-# No loop back over all years, noting trigger year
+# Now loop back over all years, noting trigger year where cap will be indexed
+# caps set to nominal values to start
 cap_singles = BENEFIT_CAP_SINGLES
 cap_couples = BENEFIT_CAP_COUPLES
 for y in range(2023, END_YEAR + 1):
     # inflation HSSVAL
-    # Assume total (not new claimants) benefits grow at average of inflation and wage growth
-    df.loc[:, "HSSVAL"] *= (1 + (WAGE_GROWTH_RATE + INFLATION_RATE) / 2)
+    # Assume new claimants benefits grow at the wage rate, existing
+    # beneficiaries grow at the inflation rate
+    df["HSSVAL"] = np.where(
+        df["A_AGE"].astype(int) <= 70,
+        df["HSSVAL"] * (1 + WAGE_GROWTH_RATE),
+        df["HSSVAL"] * (1 + INFLATION_RATE)
+    )
 
     # after trigger year, grow cap at wage index
     if y > trigger_year:
