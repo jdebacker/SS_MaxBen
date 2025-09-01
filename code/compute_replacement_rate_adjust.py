@@ -42,6 +42,8 @@ df["HSUP_WGT"] = df["HSUP_WGT"].astype(float)
 df = df[df["HSSVAL"] > 0]
 # create indicator for married or single
 df["married"] = df["HRHTYPE"].isin(["1", "2"])
+# cast A_AGE as int
+df["A_AGE"] = df["A_AGE"].astype(int)
 
 cutoffs = cpsu.show_weighted_percentile_cutoffs(df)
 df = cpsu.add_weighted_percentile_groups(df)
@@ -61,7 +63,8 @@ PHASE_OUT_RATE = (
     0.02  # number of years to phase out replacement rate adjustment
 )
 PHASE_OUT_YEARS = 150
-BENEFIT_TRIGGER_PCT = 0.10
+BENEFIT_TRIGGER_PCT = 0.25
+MAX_AGE = 85  # in simulated panel, this is age at which SS benefits end
 
 out_dict = {
     "year": [],
@@ -100,33 +103,25 @@ print(f"{BENEFIT_TRIGGER_PCT * 100:.0f} pct trigger happens in {trigger_year}")
 # caps set to nominal values to start
 cap_singles = BENEFIT_CAP_SINGLES
 cap_couples = BENEFIT_CAP_COUPLES
+# will be creating a panel from the CPS: aging folks through each year
+# until they hit MAX_AGE
+# Will keep track of this in 2 dataframes:
+# 1) df_new: new cohort entering SS system each year
+# 2) df_existing: existing cohort in SS system (derived from aging new cohort)
+df_existing = df.copy()
 for y in range(2023, END_YEAR + 1):
-    # inflation HSSVAL
-    # Assume new claimants benefits grow at the wage rate, existing
-    # beneficiaries grow at the inflation rate
-    df["HSSVAL"] = np.where(
-        df["A_AGE"].astype(int) <= 70,
-        df["HSSVAL"] * (1 + WAGE_GROWTH_RATE),
-        df["HSSVAL"] * (1 + INFLATION_RATE)
-    )
-
-    # after trigger year, grow cap at wage index
-    if y > trigger_year:
-        cap_singles *= (1 + WAGE_GROWTH_RATE)
-        cap_couples *= (1 + WAGE_GROWTH_RATE)
-
     # Compute benefits and capped amount
-    df["capped"] = np.where(
-        df["married"],
-        np.maximum(df["HSSVAL"] - cap_couples, 0),
-        np.maximum(df["HSSVAL"] - cap_singles, 0),
+    df_existing["capped"] = np.where(
+        df_existing["married"],
+        np.maximum(df_existing["HSSVAL"] - cap_couples, 0),
+        np.maximum(df_existing["HSSVAL"] - cap_singles, 0),
     )
-    total_uncapped_benefits = (df.HSSVAL * df.HSUP_WGT).sum()
-    total_capped = (df["capped"] * df["HSUP_WGT"]).sum()
+    total_uncapped_benefits = (df_existing.HSSVAL * df_existing.HSUP_WGT).sum()
+    total_capped = (df_existing["capped"] * df_existing["HSUP_WGT"]).sum()
 
     # group by percentile group and sum total HSSVAL and capped
     df_grouped = (
-        df.groupby("pctile_group")[
+        df_existing.groupby("pctile_group")[
             ["pctile_group", "HSSVAL", "HSUP_WGT", "capped"]
         ]
         .apply(
@@ -151,7 +146,27 @@ for y in range(2023, END_YEAR + 1):
                 "fraction_capped"
             ].values[0]
         )
-    out_dict["total_capped_fraction"].append(total_capped / total_uncapped_benefits)
+    out_dict["total_capped_fraction"].append(
+        total_capped / total_uncapped_benefits
+    )
+
+    # Age existing beneficiaries
+    df_existing["A_AGE"] += 1
+    # drop if age > MAX_AGE
+    df_existing = df_existing[df_existing["A_AGE"] <= MAX_AGE]
+
+    # Assume new claimants benefits grow at the wage rate
+    df_new["HSSVAL"] *= 1 + WAGE_GROWTH_RATE
+    # existing beneficiaries grow at the inflation rate
+    df_existing["HSSVAL"] *= 1 + INFLATION_RATE
+    # append the new claimants onto the existing dataframe
+    df_existing = pd.concat([df_existing, df_new], ignore_index=True)
+
+    # after trigger year, grow cap at wage index
+    if y > trigger_year:
+        cap_singles *= 1 + WAGE_GROWTH_RATE
+        cap_couples *= 1 + WAGE_GROWTH_RATE
+
 
 # %%
 # turn to df
@@ -178,7 +193,8 @@ a_dict = {"replacement_rate_adjust": a.tolist()}
 # do one minus the fraction capped to get the replacement_rate_adjust parameter
 # save to json
 with open(
-    f"maxben_replacement_rate_adjust_100k50k_{BENEFIT_TRIGGER_PCT * 100:.0f}pct.json", "w"
+    f"maxben_replacement_rate_adjust_100k50k_{BENEFIT_TRIGGER_PCT * 100:.0f}pct.json",
+    "w",
 ) as f:
     json.dump(a_dict, f)
 
@@ -190,6 +206,20 @@ fig = px.line(
     x="year",
     y=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
     title="Fraction of SS Benefits Exceeding Cap by Percentile",
+)
+fig.show()
+
+a_df = pd.DataFrame(
+    np.array(a_dict["replacement_rate_adjust"])[:, :7],
+    columns=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
+)
+# make index a year variable
+a_df["year"] = np.arange(2023, a_df.shape[0] + 2023)
+fig = px.line(
+    a_df,
+    x="year",
+    y=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
+    title="Ratio of Capped System Benefits to CL Benefits by Percentile",
 )
 fig.show()
 
@@ -221,8 +251,11 @@ fig.show()
 
 # %%
 import ogcore
+
 # Check that get the same from the replacement rates in the parameters object in the reform
-p = ogcore.utils.safe_read_pickle("/Users/jason.debacker/repos/SS_MaxBen/code/OUTPUT_SS_MAXBEN_50_smooth/p_with_maxben_replacement_rate_adjust_100k50k_25pct_100yrs.pkl")
+p = ogcore.utils.safe_read_pickle(
+    "/Users/jason.debacker/repos/SS_MaxBen/code/OUTPUT_SS_MAXBEN_50_smooth/p_with_maxben_replacement_rate_adjust_100k50k_25pct_100yrs.pkl"
+)
 a_df = pd.DataFrame(
     np.array(p.replacement_rate_adjust[:, :7]),
     columns=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
