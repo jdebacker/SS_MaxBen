@@ -40,7 +40,7 @@ def main():
     save_dir = os.path.dirname(os.path.realpath(__file__))  # SS_MaxBen/code
     main_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     base_dir_postOBBBA = os.path.join(save_dir, "OUTPUT_BASELINE_POSTOBBBA")
-    reform_dir = os.path.join(save_dir, "OUTPUT_SS_MAXBEN_10pct_trigger_smooth")
+    reform_dir = os.path.join(save_dir, "OUTPUT_SS_MAXBEN_25pct_new_trigger")
     json_dir = os.path.join(main_dir, "json")
     # tmd_dir = (
     #     "/Users/richardevans/Docs/Economics/OSE/microsim/" +
@@ -204,7 +204,7 @@ def main():
     with open(
         os.path.join(
             json_dir,
-            "maxben_replacement_rate_adjust_100k50k_10pct_150yrs.json",
+            "maxben_replacement_rate_adjust_100k50k_25pct.json",
         ),
         "r",
     ) as f:

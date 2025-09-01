@@ -50,7 +50,9 @@ base_tpi = safe_read_pickle(
     os.path.join(CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA", "TPI", "TPI_vars.pkl")
 )
 reform_tpi = safe_read_pickle(
-    os.path.join(CUR_DIR, "OUTPUT_SS_MAXBEN_50_smooth", "TPI", "TPI_vars.pkl")
+    os.path.join(
+        CUR_DIR, "OUTPUT_SS_MAXBEN_25pct_new_trigger", "TPI", "TPI_vars.pkl"
+    )
 )
 
 # %%
@@ -412,10 +414,20 @@ df = df[
     ]
 ]
 # Rename _norm columns
-df.rename(columns={"SSTF_Revenues_norm": "SSTF Revenues, Cap",
-                   "SSTF_Outlays_norm": "SSTF Outlays, Cap"}, inplace=True)
-df.rename(columns={"SSTF_Revenues_cbo": "SSTF Revenues, Current Law",
-                   "SSTF_Outlays_cbo": "SSTF Outlays, Current Law"}, inplace=True)
+df.rename(
+    columns={
+        "SSTF_Revenues_norm": "SSTF Revenues, Cap",
+        "SSTF_Outlays_norm": "SSTF Outlays, Cap",
+    },
+    inplace=True,
+)
+df.rename(
+    columns={
+        "SSTF_Revenues_cbo": "SSTF Revenues, Current Law",
+        "SSTF_Outlays_cbo": "SSTF Outlays, Current Law",
+    },
+    inplace=True,
+)
 # Keep just year and columns with SSTF prefix
 df = df[
     [
@@ -469,4 +481,6 @@ fig.update_layout(
 # Add title
 fig.update_layout(title_text="Social Security Trust Fund Revenues and Outlays")
 fig.show()
+# %%
+df.to_csv(os.path.join(SAVE_DIR, "SSTF_balances.csv"), index=False)
 # %%
