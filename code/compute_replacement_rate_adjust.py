@@ -42,12 +42,14 @@ df["HSUP_WGT"] = df["HSUP_WGT"].astype(float)
 df = df[df["HSSVAL"] > 0]
 # create indicator for married or single
 df["married"] = df["HRHTYPE"].isin(["1", "2"])
+# drop if missing age
+df = df[df["A_AGE"].notna()]
 # cast A_AGE as int
 df["A_AGE"] = df["A_AGE"].astype(int)
 
+
 cutoffs = cpsu.show_weighted_percentile_cutoffs(df)
 df = cpsu.add_weighted_percentile_groups(df)
-
 
 # %%
 # Find fraction of SS benefits that accrue to households above a benefit cap
@@ -109,6 +111,8 @@ cap_couples = BENEFIT_CAP_COUPLES
 # 1) df_new: new cohort entering SS system each year
 # 2) df_existing: existing cohort in SS system (derived from aging new cohort)
 df_existing = df.copy()
+# Create a new DF of new beneficiaries
+df_new = df[df["A_AGE"].astype(int) <= 70].copy()
 for y in range(2023, END_YEAR + 1):
     # Compute benefits and capped amount
     df_existing["capped"] = np.where(
@@ -121,7 +125,7 @@ for y in range(2023, END_YEAR + 1):
 
     # group by percentile group and sum total HSSVAL and capped
     df_grouped = (
-        df_existing.groupby("pctile_group")[
+        df_existing.groupby("pctile_group", observed=False)[
             ["pctile_group", "HSSVAL", "HSUP_WGT", "capped"]
         ]
         .apply(
@@ -155,12 +159,12 @@ for y in range(2023, END_YEAR + 1):
     # drop if age > MAX_AGE
     df_existing = df_existing[df_existing["A_AGE"] <= MAX_AGE]
 
-    # Assume new claimants benefits grow at the wage rate
+    # Assume new claimants' benefits grow at the wage rate
     df_new["HSSVAL"] *= 1 + WAGE_GROWTH_RATE
     # existing beneficiaries grow at the inflation rate
     df_existing["HSSVAL"] *= 1 + INFLATION_RATE
     # append the new claimants onto the existing dataframe
-    df_existing = pd.concat([df_existing, df_new], ignore_index=True)
+    df_existing = pd.concat([df_existing, df_new], ignore_index=True).copy()
 
     # after trigger year, grow cap at wage index
     if y > trigger_year:
@@ -227,48 +231,48 @@ fig.show()
 # put a_dict in a dataframe with columns "percentile" and "replacement_rate_adjust"
 
 # read in and plot replacement rates
-with open(
-    os.path.join(
-        cur_dir,
-        "maxben_replacement_rate_adjust_100k50k_25pct_100yrs.json",
-    ),
-    "r",
-) as f:
-    a_dict = json.load(f)
-a_df = pd.DataFrame(
-    np.array(a_dict["replacement_rate_adjust"])[:, :7],
-    columns=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
-)
-# make index a year variable
-a_df["year"] = np.arange(2023, a_df.shape[0] + 2023)
-fig = px.line(
-    a_df,
-    x="year",
-    y=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
-    title="Fraction of SS Benefits Exceeding Cap by Percentile",
-)
-fig.show()
+# with open(
+#     os.path.join(
+#         cur_dir,
+#         "maxben_replacement_rate_adjust_100k50k_25pct_100yrs.json",
+#     ),
+#     "r",
+# ) as f:
+#     a_dict = json.load(f)
+# a_df = pd.DataFrame(
+#     np.array(a_dict["replacement_rate_adjust"])[:, :7],
+#     columns=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
+# )
+# # make index a year variable
+# a_df["year"] = np.arange(2023, a_df.shape[0] + 2023)
+# fig = px.line(
+#     a_df,
+#     x="year",
+#     y=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
+#     title="Fraction of SS Benefits Exceeding Cap by Percentile",
+# )
+# fig.show()
 
 # %%
-import ogcore
+# import ogcore
 
-# Check that get the same from the replacement rates in the parameters object in the reform
-p = ogcore.utils.safe_read_pickle(
-    "/Users/jason.debacker/repos/SS_MaxBen/code/OUTPUT_SS_MAXBEN_50_smooth/p_with_maxben_replacement_rate_adjust_100k50k_25pct_100yrs.pkl"
-)
-a_df = pd.DataFrame(
-    np.array(p.replacement_rate_adjust[:, :7]),
-    columns=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
-)
-# make index a year variable
-a_df["year"] = np.arange(2023, a_df.shape[0] + 2023)
-fig = px.line(
-    a_df,
-    x="year",
-    y=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
-    title="Fraction of SS Benefits Exceeding Cap by Percentile",
-)
-fig.show()
+# # Check that get the same from the replacement rates in the parameters object in the reform
+# p = ogcore.utils.safe_read_pickle(
+#     "/Users/jason.debacker/repos/SS_MaxBen/code/OUTPUT_SS_MAXBEN_50_smooth/p_with_maxben_replacement_rate_adjust_100k50k_25pct_100yrs.pkl"
+# )
+# a_df = pd.DataFrame(
+#     np.array(p.replacement_rate_adjust[:, :7]),
+#     columns=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
+# )
+# # make index a year variable
+# a_df["year"] = np.arange(2023, a_df.shape[0] + 2023)
+# fig = px.line(
+#     a_df,
+#     x="year",
+#     y=["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"],
+#     title="Fraction of SS Benefits Exceeding Cap by Percentile",
+# )
+# fig.show()
 
 
 # %%
