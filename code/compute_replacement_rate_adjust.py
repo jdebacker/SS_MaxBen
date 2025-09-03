@@ -67,6 +67,7 @@ PHASE_OUT_RATE = (
 PHASE_OUT_YEARS = 150
 BENEFIT_TRIGGER_PCT = 0.25
 MAX_AGE = 85  # in simulated panel, this is age at which SS benefits end
+TRIGGER_YEAR = 2056
 
 out_dict = {
     "year": [],
@@ -98,7 +99,7 @@ while fraction_capped < BENEFIT_TRIGGER_PCT:
     fraction_capped = total_capped / total_benefits
     y += 1
 
-trigger_year = y
+trigger_year = TRIGGER_YEAR
 print(f"{BENEFIT_TRIGGER_PCT * 100:.0f} pct trigger happens in {trigger_year}")
 
 # Now loop back over all years, noting trigger year where cap will be indexed
@@ -197,7 +198,7 @@ a_dict = {"replacement_rate_adjust": a.tolist()}
 # do one minus the fraction capped to get the replacement_rate_adjust parameter
 # save to json
 with open(
-    f"maxben_replacement_rate_adjust_100k50k_{BENEFIT_TRIGGER_PCT * 100:.0f}pct.json",
+    f"maxben_replacement_rate_adjust_100k50k_trigger{TRIGGER_YEAR}.json",
     "w",
 ) as f:
     json.dump(a_dict, f)
