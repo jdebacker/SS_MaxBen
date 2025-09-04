@@ -26,6 +26,6 @@ dependencies:
 - pip:
   - openpyxl>=3.1.2
   - pandas-datareader
-  - ogcore==0.14.6
+  - ogcore==0.14.8
   - ogusa==0.2.4
   - taxcalc==5.2.0
