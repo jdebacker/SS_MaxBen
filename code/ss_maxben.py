@@ -21,6 +21,8 @@ from ogcore import output_tables as ot
 from ogcore import output_plots as op
 from ogcore.execute import runner
 from ogcore.utils import safe_read_pickle
+import logging
+
 
 # Use a custom matplotlib style file for plots
 style_file_url = (
@@ -40,7 +42,7 @@ def main():
     save_dir = os.path.dirname(os.path.realpath(__file__))  # SS_MaxBen/code
     main_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     base_dir_postOBBBA = os.path.join(save_dir, "OUTPUT_BASELINE_POSTOBBBA")
-    reform_dir = os.path.join(save_dir, "OUTPUT_SS_MAXBEN_25pct_new_trigger")
+    reform_dir = os.path.join(save_dir, "OUTPUT_SS_MAXBEN_50k100k_trigger2026")
     json_dir = os.path.join(main_dir, "json")
     # tmd_dir = (
     #     "/Users/richardevans/Docs/Economics/OSE/microsim/" +
@@ -184,9 +186,10 @@ def main():
     # Run model
     start_time = time.time()
     client = Client(n_workers=num_workers, threads_per_worker=1)
-    # runner(p, time_path=True, client=client)
+    # runner(p, time_path=False, client=client)
     print("run time = ", time.time() - start_time)
     client.close()
+    del client
 
     """
     ---------------------------------------------------------------------------
@@ -204,15 +207,20 @@ def main():
     with open(
         os.path.join(
             json_dir,
-            "maxben_replacement_rate_adjust_100k50k_25pct.json",
+            "maxben_replacement_rate_adjust_100k50k_trigger2026.json",
         ),
         "r",
     ) as f:
         replacement_rate_adjust = json.load(f)
     p2.update_specifications(replacement_rate_adjust)
+    # p2.update_specifications({
+    #     "reform_use_baseline_solution": False,
+    #     "initial_guess_r_SS": 0.04,
+    #     "initial_guess_TR_SS": 0.03
+    # })
     # Run model
     start_time = time.time()
-    client = Client(n_workers=num_workers, threads_per_worker=1)
+    client = Client(n_workers=num_workers)
     runner(p2, time_path=True, client=client)
     print("run time = ", time.time() - start_time)
     client.close()
