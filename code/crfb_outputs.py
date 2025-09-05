@@ -51,7 +51,7 @@ base_tpi = safe_read_pickle(
 )
 reform_tpi = safe_read_pickle(
     os.path.join(
-        CUR_DIR, "OUTPUT_SS_MAXBEN_25pct_new_trigger", "TPI", "TPI_vars.pkl"
+        CUR_DIR, "OUTPUT_SS_MAXBEN_50k100k_trigger2056", "TPI", "TPI_vars.pkl"
     )
 )
 
