@@ -39,24 +39,77 @@ px.defaults.template = "plotly_white"
 CRFB_END_YEAR = 2100
 OASDI_RATIO = 12.4 / 16.2  # This is OASDI taxes to total payroll taxes
 
-
-# Read in data
-# base_params = safe_read_pickle(
-#     os.path.join(CUR_DIR, "OUTPUT_BASELINE", "model_params.pkl")
-# )
-base_params = ogcore.parameters.Specifications()
-base_params.start_year = 2026
+# Read in model output, put reforms in dictionary
+base_params = safe_read_pickle(
+            os.path.join(
+                CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA", "model_params.pkl"
+            )
+)
 base_tpi = safe_read_pickle(
-    os.path.join(CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA", "TPI", "TPI_vars.pkl")
-)
-reform_tpi = safe_read_pickle(
-    os.path.join(
-        CUR_DIR, "OUTPUT_SS_MAXBEN_50k100k_trigger2056", "TPI", "TPI_vars.pkl"
-    )
-)
+            os.path.join(
+                CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA", "TPI", "TPI_vars.pkl"
+            )
+        )
+simulations = {
+    "2056 Trigger": {
+        "params": safe_read_pickle(
+            os.path.join(
+                CUR_DIR,
+                "OUTPUT_SS_MAXBEN_50k100k_trigger2056",
+                "model_params.pkl",
+            )
+        ),
+        "tp_vars": safe_read_pickle(
+            os.path.join(
+                CUR_DIR,
+                "OUTPUT_SS_MAXBEN_50k100k_trigger2056",
+                "TPI",
+                "TPI_vars.pkl",
+            )
+        ),
+        "suffix": "_trigger2056",
+    },
+    # "2046 Trigger": {
+    #     "params": safe_read_pickle(
+    #         os.path.join(
+    #             CUR_DIR,
+    #             "OUTPUT_SS_MAXBEN_50k100k_trigger2046",
+    #             "model_params.pkl",
+    #         )
+    #     ),
+    #     "tp_vars": safe_read_pickle(
+    #         os.path.join(
+    #             CUR_DIR,
+    #             "OUTPUT_SS_MAXBEN_50k100k_trigger2046",
+    #             "TPI",
+    #             "TPI_vars.pkl",
+    #         )
+    #     ),
+    #     "suffix": "_trigger2046",
+    # },
+    # "2026 Trigger": {
+    #     "params": safe_read_pickle(
+    #         os.path.join(
+    #             CUR_DIR,
+    #             "OUTPUT_SS_MAXBEN_50k100k_trigger2026",
+    #             "model_params.pkl",
+    #         )
+    #     ),
+    #     "tp_vars": safe_read_pickle(
+    #         os.path.join(
+    #             CUR_DIR,
+    #             "OUTPUT_SS_MAXBEN_50k100k_trigger2026",
+    #             "TPI",
+    #             "TPI_vars.pkl",
+    #         )
+    #     ),
+    #     "suffix": "_trigger2026",
+    # },
+}
+
 
 # %%
-# CBO baseline LT forecast
+# Read in CBO baseline LT forecast
 df_cbo_fiscal = pd.read_excel(
     os.path.join(CUR_DIR, "..", "data", "CBO_projections.xlsx")
 )
@@ -64,21 +117,8 @@ df_cbo_fiscal = df_cbo_fiscal.fillna(0).astype(float)
 # divide all values (except year) by 100 to put in fractions
 df_cbo_fiscal.iloc[:, 1:] = df_cbo_fiscal.iloc[:, 1:] / 100
 
-# %%
-# put macro time series into a dataframe
-macro_dict = {
-    "Year": np.arange(
-        base_params.start_year, base_params.start_year + len(base_tpi["Y"])
-    ),
-    "GDP": (reform_tpi["Y"] - base_tpi["Y"]) / base_tpi["Y"],
-    "Capital Stock": (reform_tpi["K"] - base_tpi["K"]) / base_tpi["K"],
-    "Labor Supply": (reform_tpi["L"] - base_tpi["L"]) / base_tpi["L"],
-    "Consumption": (reform_tpi["C"] - base_tpi["C"]) / base_tpi["C"],
-}
-macro_df = pd.DataFrame(macro_dict)
 
-
-# Put fiscal variables into dataframes
+# Function to put fiscal variables into dataframes
 def convert_fiscal(tpi):
     TF_revenue = tpi["payroll_tax_revenue"] * OASDI_RATIO
     TF_outlays = tpi["agg_pension_outlays"]
@@ -105,382 +145,185 @@ def convert_fiscal(tpi):
     return pd.DataFrame(fiscal_dict)
 
 
-base_fiscal_df = convert_fiscal(base_tpi)
-reform_fiscal_df = convert_fiscal(reform_tpi)
+def create_crfb_outputs(base_tpi, base_params, reform_tpi, reform_params, df_cbo_fiscal, suffix):
+    """
+    Creates and saves output for CRFB
+    """
+    # Unpack parameters
+    start_year = base_params.start_year
+    T = base_params.T
+    S = base_params.S
+    J = base_params.J
 
-# Save to CSV for CRFB
-base_fiscal_df[base_fiscal_df["Year"] <= CRFB_END_YEAR].to_csv(
-    os.path.join(SAVE_DIR, "base_fiscal_df.csv"), index=False
-)
-reform_fiscal_df[reform_fiscal_df["Year"] <= CRFB_END_YEAR].to_csv(
-    os.path.join(SAVE_DIR, "reform_fiscal_df.csv"), index=False
-)
-macro_df[macro_df["Year"] <= CRFB_END_YEAR].to_csv(
-    os.path.join(SAVE_DIR, "macro_pct_changes.csv"), index=False
-)
-
-# %%
-# Create plots for our inspection
-# put cbo and baseline together in df
-df = pd.merge(
-    base_fiscal_df, df_cbo_fiscal, on="Year", suffixes=("_base", "_cbo")
-)
-# Keep just to end of CBO forecast
-df = df[(df["Year"] >= 2026) & (df["Year"] <= 2098)]
-fig = px.line(
-    df,
-    x="Year",
-    y=[
-        "SSTF_Revenues_base",
-        "SSTF_Outlays_base",
-        "SSTF_Revenues_cbo",
-        "SSTF_Outlays_cbo",
-    ],
-)
-# Update each trace with custom colors and line styles
-for trace in fig.data:
-    trace_name = trace.name
-    # Set color based on "Revenues" or "Outlays"
-    if "Revenues" in trace_name:
-        color = "blue"
-    elif "Outlays" in trace_name:
-        color = "red"
-    # Set line style based on suffix
-    if trace_name.endswith("_base"):
-        line_dash = "dash"
-    elif trace_name.endswith("_cbo"):
-        line_dash = "solid"
-    # Apply the styling
-    trace.update(line=dict(color=color, dash=line_dash))
-# Update y-axis title
-fig.update_yaxes(title_text="Percent of GDP")
-# update Legend labels
-fig.for_each_trace(
-    lambda t: t.update(
-        name=t.name.replace("_base", " (Base)")
-        .replace("_cbo", " (CBO)")
-        .replace("SSTF_", "SSTF ")
+    # put macro pct changes time series into a dataframe
+    macro_dict = {
+        "Year": np.arange(
+            base_params.start_year, base_params.start_year + len(base_tpi["Y"])
+        ),
+        "GDP": (reform_tpi["Y"] - base_tpi["Y"]) / base_tpi["Y"],
+        "Capital Stock": (reform_tpi["K"] - base_tpi["K"]) / base_tpi["K"],
+        "Labor Supply": (reform_tpi["L"] - base_tpi["L"]) / base_tpi["L"],
+        "Consumption": (reform_tpi["C"] - base_tpi["C"]) / base_tpi["C"],
+    }
+    macro_df = pd.DataFrame(macro_dict)
+    macro_df[macro_df["Year"] <= CRFB_END_YEAR].to_csv(
+        os.path.join(SAVE_DIR, f"macro_pct_changes{suffix}.csv"), index=False
     )
-)
-# Add title
-fig.update_layout(title_text="Social Security Trust Fund Revenues and Outlays")
-fig.show()
 
-# %%
-fig = px.line(
-    df,
-    x="Year",
-    y=["PayrollTax/Y_base", "IIT/Y_base", "PayrollTax/Y_cbo", "IIT/Y_cbo"],
-)
-# Update each trace with custom colors and line styles
-for trace in fig.data:
-    trace_name = trace.name
-    # Set color based on "Revenues" or "Outlays"
-    if "IIT" in trace_name:
-        color = "blue"
-    elif "Payroll" in trace_name:
-        color = "red"
-    # Set line style based on suffix
-    if trace_name.endswith("_base"):
-        line_dash = "dash"
-    elif trace_name.endswith("_cbo"):
-        line_dash = "solid"
-    # Apply the styling
-    trace.update(line=dict(color=color, dash=line_dash))
-# Update y-axis title
-fig.update_yaxes(title_text="Percent of GDP")
-# update Legend labels
-fig.for_each_trace(
-    lambda t: t.update(
-        name=t.name.replace("_base", " (Base)")
-        .replace("_cbo", " (CBO)")
-        .replace("_", " ")
+    # Create fiscal dataframes
+    base_fiscal_df = convert_fiscal(base_tpi)
+    reform_fiscal_df = convert_fiscal(reform_tpi)
+
+     # Save to CSV for CRFB
+    base_fiscal_df[base_fiscal_df["Year"] <= CRFB_END_YEAR].to_csv(
+        os.path.join(SAVE_DIR, f"fiscal_vars_baseline.csv"), index=False
     )
-)
-# Add title
-fig.update_layout(title_text="Tax Revenues: IIT and Payroll")
-fig.show()
-
-# %%
-# Plot D/Y from CBO and baseline
-fig = px.line(df, x="Year", y=["D/Y_base", "D/Y_cbo"])
-# Update each trace with custom colors and line styles
-for trace in fig.data:
-    trace_name = trace.name
-    # Set color based on "Revenues" or "Outlays"
-    if "D/Y" in trace_name:
-        color = "blue"
-    # Set line style based on suffix
-    if trace_name.endswith("_base"):
-        line_dash = "dash"
-    elif trace_name.endswith("_cbo"):
-        line_dash = "solid"
-    # Apply the styling
-    trace.update(line=dict(color=color, dash=line_dash))
-# Update y-axis title
-fig.update_yaxes(title_text="Percent of GDP")
-# update Legend labels
-fig.for_each_trace(
-    lambda t: t.update(
-        name=t.name.replace("_base", " (Base)")
-        .replace("_cbo", " (CBO)")
-        .replace("_", " ")
+    reform_fiscal_df[reform_fiscal_df["Year"] <= CRFB_END_YEAR].to_csv(
+        os.path.join(SAVE_DIR, f"fiscal_vars{suffix}.csv"), index=False
     )
-)
-# Add title
-fig.update_layout(title_text="Debt-to-GDP Ratio: CBO vs Baseline")
-fig.show()
 
-# %%
-# Plot total Rev/Y and TotalSpend/Y
-fig = px.line(
-    df,
-    x="Year",
-    y=["Rev/Y_base", "TotalSpend/Y_base", "Rev/Y_cbo", "TotalSpend/Y_cbo"],
-)
-# Update each trace with custom colors and line styles
-for trace in fig.data:
-    trace_name = trace.name
-    # Set color based on "Revenues" or "Outlays"
-    if "Rev" in trace_name:
-        color = "blue"
-    elif "TotalSpend" in trace_name:
-        color = "red"
-    # Set line style based on suffix
-    if trace_name.endswith("_base"):
-        line_dash = "dash"
-    elif trace_name.endswith("_cbo"):
-        line_dash = "solid"
-    # Apply the styling
-    trace.update(line=dict(color=color, dash=line_dash))
-# Update y-axis title
-fig.update_yaxes(title_text="Percent of GDP")
-# update Legend labels
-fig.for_each_trace(
-    lambda t: t.update(
-        name=t.name.replace("_base", " (Base)")
-        .replace("_cbo", " (CBO)")
-        .replace("_", " ")
+    # put cbo and baseline together in df
+    df = pd.merge(
+        base_fiscal_df, df_cbo_fiscal, on="Year", suffixes=("_base", "_cbo")
     )
-)
-# Add title
-fig.update_layout(title_text="Total Revenue and Spending: CBO vs Baseline")
-fig.show()
+    for cols in reform_fiscal_df.columns:
+        if cols != "Year":
+            reform_fiscal_df.rename(columns={cols: f"{cols}_reform"}, inplace=True)
+    df = pd.merge(df, reform_fiscal_df, on="Year")
+    # Keep just to end of CBO forecast
+    df = df[(df["Year"] >= 2026) & (df["Year"] <= 2098)]
 
-
-# %%
-# Plot deficits to GDP (TotalSpend/Y - Rev/Y) for CBO and model baseline
-df["Deficit/Y_base"] = df["TotalSpend/Y_base"] - df["Rev/Y_base"]
-df["Deficit/Y_cbo"] = df["TotalSpend/Y_cbo"] - df["Rev/Y_cbo"]
-fig = px.line(
-    df,
-    x="Year",
-    y=["Deficit/Y_base", "Deficit/Y_cbo"],
-)
-# Update each trace with custom colors and line styles
-for trace in fig.data:
-    trace_name = trace.name
-    # Set line style based on suffix
-    if trace_name.endswith("_base"):
-        line_dash = "dash"
-    elif trace_name.endswith("_cbo"):
-        line_dash = "solid"
-    # Apply the styling
-    trace.update(line=dict(color=color, dash=line_dash))
-# Update y-axis title
-fig.update_yaxes(title_text="Percent of GDP")
-# update Legend labels
-fig.for_each_trace(
-    lambda t: t.update(
-        name=t.name.replace("_base", " (Base)")
-        .replace("_cbo", " (CBO)")
-        .replace("_", " ")
+    # Crate dataframe with SSTF revenues and outlays
+    df["SSTF_Revenues_norm"] = df["SSTF_Revenues_cbo"] - (
+        df["SSTF_Revenues_base"] - df["SSTF_Revenues_reform"]
     )
-)
-# Add title
-fig.update_layout(title_text="Deficits to GDP: CBO vs Baseline")
-fig.show()
-
-# %%
-# plot rD/Y
-fig = px.line(
-    df,
-    x="Year",
-    y=["rD/Y_base", "rD/Y_cbo"],
-)
-# Update each trace with custom colors and line styles
-for trace in fig.data:
-    trace_name = trace.name
-    # Set color based on "Revenues" or "Outlays"
-    if "rD/Y" in trace_name:
-        color = "blue"
-    # Set line style based on suffix
-    if trace_name.endswith("_base"):
-        line_dash = "dash"
-    elif trace_name.endswith("_cbo"):
-        line_dash = "solid"
-    # Apply the styling
-    trace.update(line=dict(color=color, dash=line_dash))
-# Update y-axis title
-fig.update_yaxes(title_text="Percent of GDP")
-# update Legend labels
-fig.for_each_trace(
-    lambda t: t.update(
-        name=t.name.replace("_base", " (Base)")
-        .replace("_cbo", " (CBO)")
-        .replace("_", " ")
+    df["SSTF_Outlays_norm"] = df["SSTF_Outlays_cbo"] - (
+        df["SSTF_Outlays_base"] - df["SSTF_Outlays_reform"]
     )
-)
-# Add title
-fig.update_layout(title_text="rD/Y: CBO vs Baseline")
-fig.show()
-# %%
-# plot pct changes in macros
-fig = px.line(
-    macro_df[macro_df["Year"] <= CRFB_END_YEAR],
-    x="Year",
-    y=["GDP", "Capital Stock", "Labor Supply", "Consumption"],
-)
-fig.update_layout(title_text="Percent Changes in Macroeconomic Variables")
-fig.show()
-
-# %%
-for cols in reform_fiscal_df.columns:
-    if cols != "Year":
-        reform_fiscal_df.rename(columns={cols: f"{cols}_reform"}, inplace=True)
-df = pd.merge(df, reform_fiscal_df, on="Year")
-df = df[(df["Year"] >= 2026) & (df["Year"] <= 2098)]
-fig = px.line(
-    df,
-    x="Year",
-    y=[
-        "SSTF_Revenues_base",
-        "SSTF_Outlays_base",
-        "SSTF_Revenues_cbo",
-        "SSTF_Outlays_cbo",
-        "SSTF_Revenues_reform",
-        "SSTF_Outlays_reform",
-    ],
-)
-# Update each trace with custom colors and line styles
-for trace in fig.data:
-    trace_name = trace.name
-    # Set color based on "Revenues" or "Outlays"
-    if "Revenues" in trace_name:
-        color = "blue"
-    elif "Outlays" in trace_name:
-        color = "red"
-    # Set line style based on suffix
-    if trace_name.endswith("_base"):
-        line_dash = "dash"
-    elif trace_name.endswith("_cbo"):
-        line_dash = "solid"
-    elif trace_name.endswith("_reform"):
-        line_dash = "dot"
-    # Apply the styling
-    trace.update(line=dict(color=color, dash=line_dash))
-# Update y-axis title
-fig.update_yaxes(title_text="Percent of GDP")
-# update Legend labels
-fig.for_each_trace(
-    lambda t: t.update(
-        name=t.name.replace("_base", " (Base)")
-        .replace("_cbo", " (CBO)")
-        .replace("SSTF_", "SSTF ")
-    )
-)
-# Add title
-fig.update_layout(title_text="Social Security Trust Fund Revenues and Outlays")
-fig.show()
-
-# %%
-# Create fiscal_reform_df_new
-# This makes sure we match the CBO forecast exactly with the baseline
-# The reform series is then then the CBO forecast plus the difference
-# before the model reform and baseline
-df["SSTF_Revenues_norm"] = df["SSTF_Revenues_cbo"] - (
-    df["SSTF_Revenues_base"] - df["SSTF_Revenues_reform"]
-)
-
-df["SSTF_Outlays_norm"] = df["SSTF_Outlays_cbo"] - (
-    df["SSTF_Outlays_base"] - df["SSTF_Outlays_reform"]
-)
-# Keep only the year column and columns with the prefix "SSTF"
-df = df[
-    [
-        col
-        for col in df.columns
-        if col.startswith("Year") or col.startswith("SSTF")
+    # Keep only the year column and columns with the prefix "SSTF"
+    df = df[
+        [
+            col
+            for col in df.columns
+            if col.startswith("Year") or col.startswith("SSTF")
+        ]
     ]
-]
-# Rename _norm columns
-df.rename(
-    columns={
-        "SSTF_Revenues_norm": "SSTF Revenues, Cap",
-        "SSTF_Outlays_norm": "SSTF Outlays, Cap",
-    },
-    inplace=True,
-)
-df.rename(
-    columns={
-        "SSTF_Revenues_cbo": "SSTF Revenues, Current Law",
-        "SSTF_Outlays_cbo": "SSTF Outlays, Current Law",
-    },
-    inplace=True,
-)
-# Keep just year and columns with SSTF prefix
-df = df[
-    [
-        col
-        for col in df.columns
-        if col.startswith("Year") or col.startswith("SSTF")
+    # Rename _norm columns
+    df.rename(
+        columns={
+            "SSTF_Revenues_norm": "SSTF Revenues, Cap",
+            "SSTF_Outlays_norm": "SSTF Outlays, Cap",
+        },
+        inplace=True,
+    )
+    df.rename(
+        columns={
+            "SSTF_Revenues_cbo": "SSTF Revenues, Current Law",
+            "SSTF_Outlays_cbo": "SSTF Outlays, Current Law",
+        },
+        inplace=True,
+    )
+    # Keep just year and columns with SSTF prefix
+    df = df[
+        [
+            col
+            for col in df.columns
+            if col.startswith("Year") or col.startswith("SSTF")
+        ]
     ]
-]
-# plot cbo and model output
-fig = px.line(
-    df,
-    x="Year",
-    y=[
-        "SSTF Revenues, Cap",
-        "SSTF Outlays, Cap",
-        "SSTF Revenues, Current Law",
-        "SSTF Outlays, Current Law",
-    ],
-)
-# Update each trace with custom colors and line styles
-for trace in fig.data:
-    trace_name = trace.name
-    # Set color based on "Revenues" or "Outlays"
-    if "Revenues" in trace_name:
-        color = "blue"
-    elif "Outlays" in trace_name:
-        color = "red"
-    # Set line style based on suffix
-    if trace_name.endswith(" Cap"):
-        line_dash = "dash"
-    elif trace_name.endswith("Current Law"):
-        line_dash = "solid"
-    # Apply the styling
-    trace.update(line=dict(color=color, dash=line_dash))
-# Update y-axis title
-fig.update_yaxes(title_text="Percent of GDP")
-# Change the aspect ratio of the figure
-fig.update_layout(
-    autosize=False,
-    width=1000,
-    height=500,
-)
-# update Legend labels
-# fig.for_each_trace(
-#     lambda t: t.update(
-#         name=t.name.replace("_reform", " (Cap Benefits)")
-#         .replace("_cbo", " (CBO)")
-#         .replace("SSTF_", "SSTF ")
-#     )
-# )
-# Add title
-fig.update_layout(title_text="Social Security Trust Fund Revenues and Outlays")
-fig.show()
-# %%
-df.to_csv(os.path.join(SAVE_DIR, "SSTF_balances.csv"), index=False)
-# %%
+    # Need to add two more years to df since CBO only goes to 2098
+    # Do this by growing at the average growth rate of the last 3 years
+    last_year = df["Year"].max()
+    for i in range(1, 3):
+        new_year = last_year + i
+        new_row = {"Year": new_year}
+        for col in df.columns:
+            if col != "Year":
+                growth_rate = (
+                    df.loc[df["Year"] == last_year, col].values[0]
+                    - df.loc[df["Year"] == last_year - 3, col].values[0]
+                ) / 3
+                new_row[col] = df.loc[df["Year"] == last_year, col].values[0] + growth_rate
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    # Keep just to 2100
+    df = df[df["Year"] <= CRFB_END_YEAR]
+    # Save to CSV for CRFB
+    df.to_csv(os.path.join(SAVE_DIR, f"SSTF_balances{suffix}.csv"), index=False)
+
+
+    # Create distributional analysis
+    # Want the following output variables: tax paid, benefits, income, consumption
+    # scale by pct of benefits in the baseline
+    # find array that is the pension amount in the baseline (T x S x J)
+    pension_baseline = (base_tpi["etr"] * base_tpi["before_tax_income"] - base_tpi["hh_taxes"] - base_tpi["tr"])
+    # make sure no negative pensions
+    pension_baseline[pension_baseline < 0] = 0
+    # Make a DataFrame that is in a long panel format: year, age, J, pension, income, consumption, tax paid
+    J_map = {
+            0: "0-25%",
+            1: "25-50%",
+            2: "50-70%",
+            3: "70-80%",
+            4: "80-90%",
+            5: "90-99%",
+            6: "99-99.5%",
+            7: "99.5-99.9%",
+            8: "99.9-99.99%",
+            9: "Top 0.01%",
+        }
+    # create dataframe with columns year, age, J
+    # year is 2026-2100
+    # ages are 20-100
+    #J is 0-9
+    years = np.arange(base_params.start_year, base_params.start_year + base_params.T)
+    ages = np.arange(base_params.E, base_params.E + base_params.S)
+    J = np.arange(base_params.J)
+    year_grid, age_grid, J_grid = np.meshgrid(years, ages, J, indexing='ij')
+    base_dist_df = pd.DataFrame({
+        "Year": year_grid.flatten(),
+        "Age": age_grid.flatten(),
+        "J": J_grid.flatten(),
+    })
+    # put consumption into dataframe
+    base_dist_df["Consumption"] = base_tpi["c"].flatten()
+    base_dist_df["Income"] = base_tpi["before_tax_income"].flatten()
+    base_dist_df["Income and Payroll Tax Paid"] = (base_tpi["hh_taxes"] + pension_baseline + base_tpi["tr"]).flatten()
+    base_dist_df["Pension"] = pension_baseline.flatten()
+    # update J to be the J_map
+    base_dist_df["J"] = base_dist_df["J"].map(J_map)
+    # repeat for reform
+    reform_dist_df = pd.DataFrame({
+        "Year": year_grid.flatten(),
+        "Age": age_grid.flatten(),
+        "J": J_grid.flatten(),
+    })
+    reform_dist_df["Consumption"] = reform_tpi["c"].flatten()
+    reform_dist_df["Income"] = reform_tpi["before_tax_income"].flatten()
+    pension_reform = (reform_tpi["etr"] * reform_tpi["before_tax_income"] - reform_tpi["hh_taxes"] - reform_tpi["tr"])
+    pension_reform[pension_reform < 0] = 0
+    reform_dist_df["Income and Payroll Tax Paid"] = (reform_tpi["hh_taxes"] + pension_reform + reform_tpi["tr"]).flatten()
+    reform_dist_df["Pension"] = pension_reform.flatten()
+    reform_dist_df["J"] = reform_dist_df["J"].map(J_map)
+
+    # keep just year <= 2100
+    base_dist_df = base_dist_df[base_dist_df["Year"] <= CRFB_END_YEAR]
+    reform_dist_df = reform_dist_df[reform_dist_df["Year"] <= CRFB_END_YEAR]
+    # save to csv
+    base_dist_df.to_csv(os.path.join(SAVE_DIR, "base_distribution.csv"), index=False)
+    reform_dist_df.to_csv(os.path.join(SAVE_DIR, f"distribution{suffix}.csv"), index=False)
+
+    # TODO: add some calls to create plots to inspect the output
+
+
+# Loop over simulations and create outputs
+for sim in simulations.keys():
+    print(f"Creating CRFB outputs for {sim}")
+    create_crfb_outputs(
+        base_tpi,
+        base_params,
+        simulations[sim]["tp_vars"],
+        simulations[sim]["params"],
+        df_cbo_fiscal,
+        simulations[sim]["suffix"],
+    )
+
