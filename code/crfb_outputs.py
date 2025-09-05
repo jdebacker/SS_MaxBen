@@ -47,29 +47,16 @@ OASDI_RATIO = 12.4 / 16.2  # This is OASDI taxes to total payroll taxes
 base_params = ogcore.parameters.Specifications()
 base_params.start_year = 2026
 base_tpi = safe_read_pickle(
-    os.path.join(CUR_DIR, "OUTPUT_BASELINE", "TPI", "TPI_vars.pkl")
+    os.path.join(CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA", "TPI", "TPI_vars.pkl")
 )
 reform_tpi = safe_read_pickle(
-    os.path.join(CUR_DIR, "OUTPUT_BASELINE", "TPI", "TPI_vars.pkl")
+    os.path.join(
+        CUR_DIR, "OUTPUT_SS_MAXBEN_50k100k_trigger2056", "TPI", "TPI_vars.pkl"
+    )
 )
-# reform_tpi = safe_read_pickle(os.path.join(CUR_DIR, "OUTPUT_SS_MAXBEN", "TPI", "TPI_vars.pkl"))
 
 # %%
 # CBO baseline LT forecast
-# df_cbo = read_cbo_forecast()  # Check - not trusting ratios to GDP calculated below -- prob bc dividing nominal numbers by real GDP
-# # create cbo fiscal that mirrors base_fiscal_df
-# df_cbo_fiscal = pd.DataFrame({
-#     "Year": df_cbo["year"],
-#     "SSTF_Revenues": (df_cbo["payroll_tax_revenue"] / 1000 * (12.4/16.2)) / df_cbo["Y"],
-#     "SSTF_Outlays": (df_cbo["agg_pension_outlays"] / 1000) / df_cbo["Y"],
-#     "D/Y": df_cbo["D/Y"] / 100,
-#     "Rev/Y": df_cbo["Revenues"] / 100,
-#     "PayrollTax/Y": (df_cbo["payroll_tax_revenue"] / 1000) / df_cbo["Y"],
-#     "IIT/Y": (
-#         df_cbo["iit_revenue"] / 1000) / df_cbo["Y"],
-#     "rD/Y": (df_cbo["r"] * df_cbo["D"] / 1000) / df_cbo["Y"]
-# })
-# Replace NaN and make all columns float
 df_cbo_fiscal = pd.read_excel(
     os.path.join(CUR_DIR, "..", "data", "CBO_projections.xlsx")
 )
@@ -138,8 +125,8 @@ macro_df[macro_df["Year"] <= CRFB_END_YEAR].to_csv(
 df = pd.merge(
     base_fiscal_df, df_cbo_fiscal, on="Year", suffixes=("_base", "_cbo")
 )
-# Keep just 2026-2035
-df = df[(df["Year"] >= 2026) & (df["Year"] <= 2055)]
+# Keep just to end of CBO forecast
+df = df[(df["Year"] >= 2026) & (df["Year"] <= 2098)]
 fig = px.line(
     df,
     x="Year",
@@ -347,4 +334,153 @@ fig.for_each_trace(
 # Add title
 fig.update_layout(title_text="rD/Y: CBO vs Baseline")
 fig.show()
+# %%
+# plot pct changes in macros
+fig = px.line(
+    macro_df[macro_df["Year"] <= CRFB_END_YEAR],
+    x="Year",
+    y=["GDP", "Capital Stock", "Labor Supply", "Consumption"],
+)
+fig.update_layout(title_text="Percent Changes in Macroeconomic Variables")
+fig.show()
+
+# %%
+for cols in reform_fiscal_df.columns:
+    if cols != "Year":
+        reform_fiscal_df.rename(columns={cols: f"{cols}_reform"}, inplace=True)
+df = pd.merge(df, reform_fiscal_df, on="Year")
+df = df[(df["Year"] >= 2026) & (df["Year"] <= 2098)]
+fig = px.line(
+    df,
+    x="Year",
+    y=[
+        "SSTF_Revenues_base",
+        "SSTF_Outlays_base",
+        "SSTF_Revenues_cbo",
+        "SSTF_Outlays_cbo",
+        "SSTF_Revenues_reform",
+        "SSTF_Outlays_reform",
+    ],
+)
+# Update each trace with custom colors and line styles
+for trace in fig.data:
+    trace_name = trace.name
+    # Set color based on "Revenues" or "Outlays"
+    if "Revenues" in trace_name:
+        color = "blue"
+    elif "Outlays" in trace_name:
+        color = "red"
+    # Set line style based on suffix
+    if trace_name.endswith("_base"):
+        line_dash = "dash"
+    elif trace_name.endswith("_cbo"):
+        line_dash = "solid"
+    elif trace_name.endswith("_reform"):
+        line_dash = "dot"
+    # Apply the styling
+    trace.update(line=dict(color=color, dash=line_dash))
+# Update y-axis title
+fig.update_yaxes(title_text="Percent of GDP")
+# update Legend labels
+fig.for_each_trace(
+    lambda t: t.update(
+        name=t.name.replace("_base", " (Base)")
+        .replace("_cbo", " (CBO)")
+        .replace("SSTF_", "SSTF ")
+    )
+)
+# Add title
+fig.update_layout(title_text="Social Security Trust Fund Revenues and Outlays")
+fig.show()
+
+# %%
+# Create fiscal_reform_df_new
+# This makes sure we match the CBO forecast exactly with the baseline
+# The reform series is then then the CBO forecast plus the difference
+# before the model reform and baseline
+df["SSTF_Revenues_norm"] = df["SSTF_Revenues_cbo"] - (
+    df["SSTF_Revenues_base"] - df["SSTF_Revenues_reform"]
+)
+
+df["SSTF_Outlays_norm"] = df["SSTF_Outlays_cbo"] - (
+    df["SSTF_Outlays_base"] - df["SSTF_Outlays_reform"]
+)
+# Keep only the year column and columns with the prefix "SSTF"
+df = df[
+    [
+        col
+        for col in df.columns
+        if col.startswith("Year") or col.startswith("SSTF")
+    ]
+]
+# Rename _norm columns
+df.rename(
+    columns={
+        "SSTF_Revenues_norm": "SSTF Revenues, Cap",
+        "SSTF_Outlays_norm": "SSTF Outlays, Cap",
+    },
+    inplace=True,
+)
+df.rename(
+    columns={
+        "SSTF_Revenues_cbo": "SSTF Revenues, Current Law",
+        "SSTF_Outlays_cbo": "SSTF Outlays, Current Law",
+    },
+    inplace=True,
+)
+# Keep just year and columns with SSTF prefix
+df = df[
+    [
+        col
+        for col in df.columns
+        if col.startswith("Year") or col.startswith("SSTF")
+    ]
+]
+# plot cbo and model output
+fig = px.line(
+    df,
+    x="Year",
+    y=[
+        "SSTF Revenues, Cap",
+        "SSTF Outlays, Cap",
+        "SSTF Revenues, Current Law",
+        "SSTF Outlays, Current Law",
+    ],
+)
+# Update each trace with custom colors and line styles
+for trace in fig.data:
+    trace_name = trace.name
+    # Set color based on "Revenues" or "Outlays"
+    if "Revenues" in trace_name:
+        color = "blue"
+    elif "Outlays" in trace_name:
+        color = "red"
+    # Set line style based on suffix
+    if trace_name.endswith(" Cap"):
+        line_dash = "dash"
+    elif trace_name.endswith("Current Law"):
+        line_dash = "solid"
+    # Apply the styling
+    trace.update(line=dict(color=color, dash=line_dash))
+# Update y-axis title
+fig.update_yaxes(title_text="Percent of GDP")
+# Change the aspect ratio of the figure
+fig.update_layout(
+    autosize=False,
+    width=1000,
+    height=500,
+)
+# update Legend labels
+# fig.for_each_trace(
+#     lambda t: t.update(
+#         name=t.name.replace("_reform", " (Cap Benefits)")
+#         .replace("_cbo", " (CBO)")
+#         .replace("SSTF_", "SSTF ")
+#     )
+# )
+# Add title
+fig.update_layout(title_text="Social Security Trust Fund Revenues and Outlays")
+fig.show()
+# %%
+df.to_csv(os.path.join(SAVE_DIR, "SSTF_balances.csv"), index=False)
 # %%
