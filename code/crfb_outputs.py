@@ -21,10 +21,10 @@ CRFB wants:
 import os
 import pandas as pd
 import numpy as np
-import plotly.express as px
 import ogcore
 from ogcore.utils import safe_read_pickle
 from ogusa.utils import read_cbo_forecast
+import crfb_plots as cp
 
 # set current directory
 CUR_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -32,8 +32,6 @@ CUR_DIR = os.path.dirname(os.path.realpath(__file__))
 SAVE_DIR = os.path.join(CUR_DIR, "..", "CRFB_outputs")
 # make directory if it doesn't exist
 os.makedirs(SAVE_DIR, exist_ok=True)
-# set plotly theme to white
-px.defaults.template = "plotly_white"
 
 # Constants used below
 CRFB_END_YEAR = 2100
