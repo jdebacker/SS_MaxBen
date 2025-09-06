@@ -39,15 +39,11 @@ OASDI_RATIO = 12.4 / 16.2  # This is OASDI taxes to total payroll taxes
 
 # Read in model output, put reforms in dictionary
 base_params = safe_read_pickle(
-            os.path.join(
-                CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA", "model_params.pkl"
-            )
+    os.path.join(CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA", "model_params.pkl")
 )
 base_tpi = safe_read_pickle(
-            os.path.join(
-                CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA", "TPI", "TPI_vars.pkl"
-            )
-        )
+    os.path.join(CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA", "TPI", "TPI_vars.pkl")
+)
 simulations = {
     "2056 Trigger": {
         "params": safe_read_pickle(
@@ -143,7 +139,9 @@ def convert_fiscal(tpi):
     return pd.DataFrame(fiscal_dict)
 
 
-def create_crfb_outputs(base_tpi, base_params, reform_tpi, reform_params, df_cbo_fiscal, suffix):
+def create_crfb_outputs(
+    base_tpi, base_params, reform_tpi, reform_params, df_cbo_fiscal, suffix
+):
     """
     Creates and saves output for CRFB
     """
@@ -172,7 +170,7 @@ def create_crfb_outputs(base_tpi, base_params, reform_tpi, reform_params, df_cbo
     base_fiscal_df = convert_fiscal(base_tpi)
     reform_fiscal_df = convert_fiscal(reform_tpi)
 
-     # Save to CSV for CRFB
+    # Save to CSV for CRFB
     base_fiscal_df[base_fiscal_df["Year"] <= CRFB_END_YEAR].to_csv(
         os.path.join(SAVE_DIR, f"fiscal_vars_baseline.csv"), index=False
     )
@@ -186,7 +184,9 @@ def create_crfb_outputs(base_tpi, base_params, reform_tpi, reform_params, df_cbo
     )
     for cols in reform_fiscal_df.columns:
         if cols != "Year":
-            reform_fiscal_df.rename(columns={cols: f"{cols}_reform"}, inplace=True)
+            reform_fiscal_df.rename(
+                columns={cols: f"{cols}_reform"}, inplace=True
+            )
     df = pd.merge(df, reform_fiscal_df, on="Year")
     # Keep just to end of CBO forecast
     df = df[(df["Year"] >= 2026) & (df["Year"] <= 2098)]
@@ -241,65 +241,87 @@ def create_crfb_outputs(base_tpi, base_params, reform_tpi, reform_params, df_cbo
                     df.loc[df["Year"] == last_year, col].values[0]
                     - df.loc[df["Year"] == last_year - 3, col].values[0]
                 ) / 3
-                new_row[col] = df.loc[df["Year"] == last_year, col].values[0] + growth_rate
+                new_row[col] = (
+                    df.loc[df["Year"] == last_year, col].values[0]
+                    + growth_rate
+                )
         df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
     # Keep just to 2100
     df = df[df["Year"] <= CRFB_END_YEAR]
     # Save to CSV for CRFB
-    df.to_csv(os.path.join(SAVE_DIR, f"SSTF_balances{suffix}.csv"), index=False)
-
+    df.to_csv(
+        os.path.join(SAVE_DIR, f"SSTF_balances{suffix}.csv"), index=False
+    )
 
     # Create distributional analysis
     # Want the following output variables: tax paid, benefits, income, consumption
     # scale by pct of benefits in the baseline
     # find array that is the pension amount in the baseline (T x S x J)
-    pension_baseline = (base_tpi["etr"] * base_tpi["before_tax_income"] - base_tpi["hh_taxes"] - base_tpi["tr"])
+    pension_baseline = (
+        base_tpi["etr"] * base_tpi["before_tax_income"]
+        - base_tpi["hh_taxes"]
+        - base_tpi["tr"]
+    )
     # make sure no negative pensions
     pension_baseline[pension_baseline < 0] = 0
     # Make a DataFrame that is in a long panel format: year, age, J, pension, income, consumption, tax paid
     J_map = {
-            0: "0-25%",
-            1: "25-50%",
-            2: "50-70%",
-            3: "70-80%",
-            4: "80-90%",
-            5: "90-99%",
-            6: "99-99.5%",
-            7: "99.5-99.9%",
-            8: "99.9-99.99%",
-            9: "Top 0.01%",
-        }
+        0: "0-25%",
+        1: "25-50%",
+        2: "50-70%",
+        3: "70-80%",
+        4: "80-90%",
+        5: "90-99%",
+        6: "99-99.5%",
+        7: "99.5-99.9%",
+        8: "99.9-99.99%",
+        9: "Top 0.01%",
+    }
     # create dataframe with columns year, age, J
     # year is 2026-2100
     # ages are 20-100
-    #J is 0-9
-    years = np.arange(base_params.start_year, base_params.start_year + base_params.T)
+    # J is 0-9
+    years = np.arange(
+        base_params.start_year, base_params.start_year + base_params.T
+    )
     ages = np.arange(base_params.E, base_params.E + base_params.S)
     J = np.arange(base_params.J)
-    year_grid, age_grid, J_grid = np.meshgrid(years, ages, J, indexing='ij')
-    base_dist_df = pd.DataFrame({
-        "Year": year_grid.flatten(),
-        "Age": age_grid.flatten(),
-        "J": J_grid.flatten(),
-    })
+    year_grid, age_grid, J_grid = np.meshgrid(years, ages, J, indexing="ij")
+    base_dist_df = pd.DataFrame(
+        {
+            "Year": year_grid.flatten(),
+            "Age": age_grid.flatten(),
+            "J": J_grid.flatten(),
+        }
+    )
     # put consumption into dataframe
     base_dist_df["Consumption"] = base_tpi["c"].flatten()
     base_dist_df["Income"] = base_tpi["before_tax_income"].flatten()
-    base_dist_df["Income and Payroll Tax Paid"] = (base_tpi["hh_taxes"] + pension_baseline + base_tpi["tr"]).flatten()
+    base_dist_df["Income and Payroll Tax Paid"] = (
+        base_tpi["hh_taxes"] + pension_baseline + base_tpi["tr"]
+    ).flatten()
     base_dist_df["Pension"] = pension_baseline.flatten()
     # update J to be the J_map
     base_dist_df["J"] = base_dist_df["J"].map(J_map)
     # repeat for reform
-    reform_dist_df = pd.DataFrame({
-        "Year": year_grid.flatten(),
-        "Age": age_grid.flatten(),
-        "J": J_grid.flatten(),
-    })
+    reform_dist_df = pd.DataFrame(
+        {
+            "Year": year_grid.flatten(),
+            "Age": age_grid.flatten(),
+            "J": J_grid.flatten(),
+        }
+    )
     reform_dist_df["Consumption"] = reform_tpi["c"].flatten()
     reform_dist_df["Income"] = reform_tpi["before_tax_income"].flatten()
-    pension_reform = (reform_tpi["etr"] * reform_tpi["before_tax_income"] - reform_tpi["hh_taxes"] - reform_tpi["tr"])
+    pension_reform = (
+        reform_tpi["etr"] * reform_tpi["before_tax_income"]
+        - reform_tpi["hh_taxes"]
+        - reform_tpi["tr"]
+    )
     pension_reform[pension_reform < 0] = 0
-    reform_dist_df["Income and Payroll Tax Paid"] = (reform_tpi["hh_taxes"] + pension_reform + reform_tpi["tr"]).flatten()
+    reform_dist_df["Income and Payroll Tax Paid"] = (
+        reform_tpi["hh_taxes"] + pension_reform + reform_tpi["tr"]
+    ).flatten()
     reform_dist_df["Pension"] = pension_reform.flatten()
     reform_dist_df["J"] = reform_dist_df["J"].map(J_map)
 
@@ -307,8 +329,12 @@ def create_crfb_outputs(base_tpi, base_params, reform_tpi, reform_params, df_cbo
     base_dist_df = base_dist_df[base_dist_df["Year"] <= CRFB_END_YEAR]
     reform_dist_df = reform_dist_df[reform_dist_df["Year"] <= CRFB_END_YEAR]
     # save to csv
-    base_dist_df.to_csv(os.path.join(SAVE_DIR, "base_distribution.csv"), index=False)
-    reform_dist_df.to_csv(os.path.join(SAVE_DIR, f"distribution{suffix}.csv"), index=False)
+    base_dist_df.to_csv(
+        os.path.join(SAVE_DIR, "base_distribution.csv"), index=False
+    )
+    reform_dist_df.to_csv(
+        os.path.join(SAVE_DIR, f"distribution{suffix}.csv"), index=False
+    )
 
     # TODO: add some calls to create plots to inspect the output
 
@@ -324,4 +350,3 @@ for sim in simulations.keys():
         df_cbo_fiscal,
         simulations[sim]["suffix"],
     )
-

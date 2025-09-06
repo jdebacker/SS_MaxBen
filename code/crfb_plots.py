@@ -9,15 +9,15 @@ px.defaults.template = "plotly_white"
 
 def SSTF_plot(df):
     fig = px.line(
-            df,
-            x="Year",
-            y=[
-                "SSTF_Revenues_base",
-                "SSTF_Outlays_base",
-                "SSTF_Revenues_cbo",
-                "SSTF_Outlays_cbo",
-            ],
-        )
+        df,
+        x="Year",
+        y=[
+            "SSTF_Revenues_base",
+            "SSTF_Outlays_base",
+            "SSTF_Revenues_cbo",
+            "SSTF_Outlays_cbo",
+        ],
+    )
     # Update each trace with custom colors and line styles
     for trace in fig.data:
         trace_name = trace.name
@@ -44,7 +44,9 @@ def SSTF_plot(df):
         )
     )
     # Add title
-    fig.update_layout(title_text="Social Security Trust Fund Revenues and Outlays")
+    fig.update_layout(
+        title_text="Social Security Trust Fund Revenues and Outlays"
+    )
     fig.show()
 
 
@@ -153,7 +155,7 @@ def plot_fiscal(df):
 
 
 def plot_rev_spend(df):
-# Plot total Rev/Y and TotalSpend/Y
+    # Plot total Rev/Y and TotalSpend/Y
     fig = px.line(
         df,
         x="Year",
@@ -258,7 +260,7 @@ def plot_rD_Y(df):
 
 
 def plot_macros(macro_df):
-# plot pct changes in macros
+    # plot pct changes in macros
     fig = px.line(
         macro_df[macro_df["Year"] <= CRFB_END_YEAR],
         x="Year",
@@ -309,7 +311,9 @@ def plot_rev_outlays_cbo(df):
         )
     )
     # Add title
-    fig.update_layout(title_text="Social Security Trust Fund Revenues and Outlays")
+    fig.update_layout(
+        title_text="Social Security Trust Fund Revenues and Outlays"
+    )
     fig.show()
 
 
@@ -357,5 +361,7 @@ def plot_sstf_revenues_outlays(df):
     #     )
     # )
     # Add title
-    fig.update_layout(title_text="Social Security Trust Fund Revenues and Outlays")
+    fig.update_layout(
+        title_text="Social Security Trust Fund Revenues and Outlays"
+    )
     fig.show()
