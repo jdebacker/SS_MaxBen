@@ -52,7 +52,7 @@ def SSTF_plot(df, filename=None):
 
 def plot_fiscal(df, end_year=2054, filename=None):
     fig = px.line(
-        df,
+        df[df["Year"] <= end_year],
         x="Year",
         y=["PayrollTax/Y_base", "IIT/Y_base", "PayrollTax/Y_cbo", "IIT/Y_cbo"],
     )
@@ -91,7 +91,7 @@ def plot_fiscal(df, end_year=2054, filename=None):
 
 def plot_debt(df, end_year=2054, filename=None):
     # Plot D/Y from CBO and baseline
-    fig = px.line(df, x="Year", y=["D/Y_base", "D/Y_cbo"])
+    fig = px.line(df[df["Year"] <= end_year], x="Year", y=["D/Y_base", "D/Y_cbo"])
     # Update each trace with custom colors and line styles
     for trace in fig.data:
         trace_name = trace.name
@@ -126,7 +126,7 @@ def plot_debt(df, end_year=2054, filename=None):
 def plot_rev_spend(df, end_year=2054, filename=None):
     # Plot total Rev/Y and TotalSpend/Y
     fig = px.line(
-        df,
+        df[df["Year"] <= end_year],
         x="Year",
         y=["Rev/Y_base", "TotalSpend/Y_base", "Rev/Y_cbo", "TotalSpend/Y_cbo"],
     )
@@ -168,7 +168,7 @@ def plot_deficit(df, end_year=2054, filename=None):
     df["Deficit/Y_base"] = df["TotalSpend/Y_base"] - df["Rev/Y_base"]
     df["Deficit/Y_cbo"] = df["TotalSpend/Y_cbo"] - df["Rev/Y_cbo"]
     fig = px.line(
-        df,
+        df[df["Year"] <= end_year],
         x="Year",
         y=["Deficit/Y_base", "Deficit/Y_cbo"],
     )
@@ -202,7 +202,7 @@ def plot_deficit(df, end_year=2054, filename=None):
 
 def plot_rD_Y(df, end_year=2054, filename=None):
     fig = px.line(
-        df,
+        df[df["Year"] <= end_year],
         x="Year",
         y=["rD/Y_base", "rD/Y_cbo"],
     )

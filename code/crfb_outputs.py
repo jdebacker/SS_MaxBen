@@ -355,6 +355,7 @@ def create_crfb_outputs(
         os.path.join(SAVE_DIR, f"distribution{suffix}.csv"), index=False
     )
 
+
 # Loop over simulations and create outputs
 for sim in simulations.keys():
     print(f"Creating CRFB outputs for {sim}")
