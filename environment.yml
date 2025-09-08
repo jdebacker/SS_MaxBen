@@ -9,6 +9,7 @@ dependencies:
 - pandas>=1.2.5
 - matplotlib
 - plotly
+- python-kaleido
 - bokeh
 - dask>=2.30.0
 - dask-core>=2.30.0
