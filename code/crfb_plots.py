@@ -259,7 +259,7 @@ def plot_rD_Y(df):
     fig.show()
 
 
-def plot_macros(macro_df):
+def plot_macros(macro_df, filename=None):
     # plot pct changes in macros
     fig = px.line(
         macro_df[macro_df["Year"] <= CRFB_END_YEAR],
@@ -267,7 +267,10 @@ def plot_macros(macro_df):
         y=["GDP", "Capital Stock", "Labor Supply", "Consumption"],
     )
     fig.update_layout(title_text="Percent Changes in Macroeconomic Variables")
-    fig.show()
+    if filename is not None:
+        fig.write_image(filename, scale=3)
+    else:
+        fig.show()
 
 
 def plot_rev_outlays_cbo(df):

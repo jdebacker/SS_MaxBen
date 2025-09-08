@@ -63,42 +63,42 @@ simulations = {
         ),
         "suffix": "_trigger2056",
     },
-    # "2046 Trigger": {
-    #     "params": safe_read_pickle(
-    #         os.path.join(
-    #             CUR_DIR,
-    #             "OUTPUT_SS_MAXBEN_50k100k_trigger2046",
-    #             "model_params.pkl",
-    #         )
-    #     ),
-    #     "tp_vars": safe_read_pickle(
-    #         os.path.join(
-    #             CUR_DIR,
-    #             "OUTPUT_SS_MAXBEN_50k100k_trigger2046",
-    #             "TPI",
-    #             "TPI_vars.pkl",
-    #         )
-    #     ),
-    #     "suffix": "_trigger2046",
-    # },
-    # "2026 Trigger": {
-    #     "params": safe_read_pickle(
-    #         os.path.join(
-    #             CUR_DIR,
-    #             "OUTPUT_SS_MAXBEN_50k100k_trigger2026",
-    #             "model_params.pkl",
-    #         )
-    #     ),
-    #     "tp_vars": safe_read_pickle(
-    #         os.path.join(
-    #             CUR_DIR,
-    #             "OUTPUT_SS_MAXBEN_50k100k_trigger2026",
-    #             "TPI",
-    #             "TPI_vars.pkl",
-    #         )
-    #     ),
-    #     "suffix": "_trigger2026",
-    # },
+    "2046 Trigger": {
+        "params": safe_read_pickle(
+            os.path.join(
+                CUR_DIR,
+                "OUTPUT_SS_MAXBEN_2046",
+                "model_params.pkl",
+            )
+        ),
+        "tp_vars": safe_read_pickle(
+            os.path.join(
+                CUR_DIR,
+                "OUTPUT_SS_MAXBEN_2046",
+                "TPI",
+                "TPI_vars.pkl",
+            )
+        ),
+        "suffix": "_trigger2046",
+    },
+    "2026 Trigger": {
+        "params": safe_read_pickle(
+            os.path.join(
+                CUR_DIR,
+                "OUTPUT_SS_MAXBEN_50k100k_trigger2026",
+                "model_params.pkl",
+            )
+        ),
+        "tp_vars": safe_read_pickle(
+            os.path.join(
+                CUR_DIR,
+                "OUTPUT_SS_MAXBEN_50k100k_trigger2026",
+                "TPI",
+                "TPI_vars.pkl",
+            )
+        ),
+        "suffix": "_trigger2026",
+    }
 }
 
 
