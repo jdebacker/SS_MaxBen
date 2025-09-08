@@ -21,17 +21,17 @@ CRFB wants:
 import os
 import pandas as pd
 import numpy as np
-import ogcore
 from ogcore.utils import safe_read_pickle
-from ogusa.utils import read_cbo_forecast
 import crfb_plots as cp
 
 # set current directory
 CUR_DIR = os.path.dirname(os.path.realpath(__file__))
 # set directory to save tables to
 SAVE_DIR = os.path.join(CUR_DIR, "..", "CRFB_outputs")
+plot_path = os.path.join(SAVE_DIR, "plots")
 # make directory if it doesn't exist
 os.makedirs(SAVE_DIR, exist_ok=True)
+os.makedirs(plot_path, exist_ok=True)
 
 # Constants used below
 CRFB_END_YEAR = 2100
@@ -98,7 +98,7 @@ simulations = {
             )
         ),
         "suffix": "_trigger2026",
-    }
+    },
 }
 
 
@@ -165,6 +165,9 @@ def create_crfb_outputs(
     macro_df[macro_df["Year"] <= CRFB_END_YEAR].to_csv(
         os.path.join(SAVE_DIR, f"macro_pct_changes{suffix}.csv"), index=False
     )
+    # plot macro pct changes
+    filename = os.path.join(plot_path, f"macro_pct_changes{suffix}.png")
+    cp.plot_macros(macro_df, CRFB_END_YEAR, filename=filename)
 
     # Create fiscal dataframes
     base_fiscal_df = convert_fiscal(base_tpi)
@@ -190,6 +193,19 @@ def create_crfb_outputs(
     df = pd.merge(df, reform_fiscal_df, on="Year")
     # Keep just to end of CBO forecast
     df = df[(df["Year"] >= 2026) & (df["Year"] <= 2098)]
+    # Create plots of fiscal variables to inspect
+    filename = os.path.join(plot_path, f"rD_Y_base_v_cbo.png")
+    cp.plot_rD_Y(df, filename=filename)
+    filename = os.path.join(plot_path, f"deficits_base_v_cbo.png")
+    cp.plot_deficit(df, filename=filename)
+    filename = os.path.join(plot_path, f"rev_and_spend_base_v_cbo.png")
+    cp.plot_rev_spend(df, filename=filename)
+    filename = os.path.join(plot_path, f"tax_rev_base_v_cbo.png")
+    cp.plot_fiscal(df, filename=filename)
+    filename = os.path.join(plot_path, f"debt_base_v_cbo.png")
+    cp.plot_debt(df, filename=filename)
+    filename = os.path.join(plot_path, f"sstf_base_v_cbo.png")
+    cp.plot_sstf_cbo(df, filename=filename)
 
     # Crate dataframe with SSTF revenues and outlays
     df["SSTF_Revenues_norm"] = df["SSTF_Revenues_cbo"] - (
@@ -252,6 +268,9 @@ def create_crfb_outputs(
     df.to_csv(
         os.path.join(SAVE_DIR, f"SSTF_balances{suffix}.csv"), index=False
     )
+    # Create plot of SSTF revenues and outlays
+    filename = os.path.join(plot_path, f"SSTF_revenues_outlays{suffix}.png")
+    cp.plot_sstf_revenues_outlays(df, filename=filename)
 
     # Create distributional analysis
     # Want the following output variables: tax paid, benefits, income, consumption
