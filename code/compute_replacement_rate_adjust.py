@@ -67,7 +67,7 @@ PHASE_OUT_RATE = (
 PHASE_OUT_YEARS = 150
 BENEFIT_TRIGGER_PCT = 0.25
 MAX_AGE = 85  # in simulated panel, this is age at which SS benefits end
-TRIGGER_YEAR = 2023
+TRIGGER_YEAR = 2043
 
 out_dict = {
     "year": [],
@@ -169,10 +169,11 @@ for y in range(2023, END_YEAR + 1):
 
     # after trigger year, grow cap at wage index
     if y > trigger_year:
-        # cap_singles *= 1 + WAGE_GROWTH_RATE
-        # cap_couples *= 1 + WAGE_GROWTH_RATE
-        cap_singles *= 1 + INFLATION_RATE
-        cap_couples *= 1 + INFLATION_RATE
+        cap_singles *= 1 + WAGE_GROWTH_RATE
+        cap_couples *= 1 + WAGE_GROWTH_RATE
+        # comment 2 above and uncomment 2 below for Option 1
+        # cap_singles *= 1 + INFLATION_RATE
+        # cap_couples *= 1 + INFLATION_RATE
 
 
 # %%
