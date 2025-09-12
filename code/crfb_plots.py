@@ -91,7 +91,9 @@ def plot_fiscal(df, end_year=2054, filename=None):
 
 def plot_debt(df, end_year=2054, filename=None):
     # Plot D/Y from CBO and baseline
-    fig = px.line(df[df["Year"] <= end_year], x="Year", y=["D/Y_base", "D/Y_cbo"])
+    fig = px.line(
+        df[df["Year"] <= end_year], x="Year", y=["D/Y_base", "D/Y_cbo"]
+    )
     # Update each trace with custom colors and line styles
     for trace in fig.data:
         trace_name = trace.name
