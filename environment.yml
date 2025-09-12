@@ -9,6 +9,7 @@ dependencies:
 - pandas>=1.2.5
 - matplotlib
 - plotly
+- python-kaleido
 - bokeh
 - dask>=2.30.0
 - dask-core>=2.30.0
@@ -26,6 +27,6 @@ dependencies:
 - pip:
   - openpyxl>=3.1.2
   - pandas-datareader
-  - ogcore==0.14.7
-  - ogusa==0.2.4
+  - ogcore==0.14.10
+  - ogusa==0.3.0
   - taxcalc==5.2.0

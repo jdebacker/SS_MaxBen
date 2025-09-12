@@ -44,8 +44,8 @@ def main():
     reform_dir_2056 = os.path.join(save_dir, "OUTPUT_SS_MAXBEN_2056")
     json_dir = os.path.join(main_dir, "json")
     tmd_dir = (
-        "/Users/richardevans/Docs/Economics/OSE/microsim/" +
-        "tax-microdata-benchmarking/tmd/storage/output"
+        "/Users/richardevans/Docs/Economics/OSE/microsim/"
+        + "tax-microdata-benchmarking/tmd/storage/output"
     )
     # tmd_dir = (
     #     "/Users/jason.debacker/repos/tax-microdata-benchmarking/"
@@ -204,7 +204,7 @@ def main():
     # Update parameters
     updated_params_2046 = {
         "RC_TPI": 100 * 1e-4,
-        "debt_ratio_ss": 1.90 - 0.01911958  # This is the difference at 2046
+        "debt_ratio_ss": 1.90 - 0.01911958,  # This is the difference at 2046
     }
     p2.update_specifications(updated_params_2046)
     # Read in replacement rate json
@@ -291,7 +291,7 @@ def main():
     # Update parameters
     updated_params_2056 = {
         "RC_TPI": 100 * 1e-4,
-        "debt_ratio_ss": 1.90 - 0.039  # This is the difference at 2056
+        "debt_ratio_ss": 1.90 - 0.039,  # This is the difference at 2056
     }
     p3.update_specifications(updated_params_2056)
     # Read in replacement rate json
