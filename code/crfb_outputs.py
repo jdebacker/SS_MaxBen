@@ -39,65 +39,65 @@ OASDI_RATIO = 12.4 / 16.2  # This is OASDI taxes to total payroll taxes
 
 # Read in model output, put reforms in dictionary
 base_params = safe_read_pickle(
-    os.path.join(CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA", "model_params.pkl")
+    os.path.join(CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA_tg1_40", "model_params.pkl")
 )
 base_tpi = safe_read_pickle(
-    os.path.join(CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA", "TPI", "TPI_vars.pkl")
+    os.path.join(CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA_tg1_40", "TPI", "TPI_vars.pkl")
 )
 simulations = {
     "2056 Trigger": {
         "params": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "OUTPUT_SS_MAXBEN_50k100k_trigger2056",
+                "OUTPUT_SS_MAXBEN_2056_tg1_40",
                 "model_params.pkl",
             )
         ),
         "tp_vars": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "OUTPUT_SS_MAXBEN_50k100k_trigger2056",
+                "OUTPUT_SS_MAXBEN_2056_tg1_40",
                 "TPI",
                 "TPI_vars.pkl",
             )
         ),
-        "suffix": "_trigger2056",
+        "suffix": "_2056",
     },
     "2046 Trigger": {
         "params": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "OUTPUT_SS_MAXBEN_2046",
+                "OUTPUT_SS_MAXBEN_2046_tg1_40",
                 "model_params.pkl",
             )
         ),
         "tp_vars": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "OUTPUT_SS_MAXBEN_2046",
+                "OUTPUT_SS_MAXBEN_2046_tg1_40",
                 "TPI",
                 "TPI_vars.pkl",
             )
         ),
-        "suffix": "_trigger2046",
+        "suffix": "_2046",
     },
     "2026 Trigger": {
         "params": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "OUTPUT_SS_MAXBEN_50k100k_trigger2026",
+                "OUTPUT_SS_MAXBEN_2026_tg1_40",
                 "model_params.pkl",
             )
         ),
         "tp_vars": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "OUTPUT_SS_MAXBEN_50k100k_trigger2026",
+                "OUTPUT_SS_MAXBEN_2026_tg1_40",
                 "TPI",
                 "TPI_vars.pkl",
             )
         ),
-        "suffix": "_trigger2026",
+        "suffix": "_2026",
     },
 }
 
@@ -137,6 +137,73 @@ def convert_fiscal(tpi):
         "TotalSpend/Y": total_spending / tpi["Y"],
     }
     return pd.DataFrame(fiscal_dict)
+
+
+# Function to compute average annual Social Security benefits by cohort
+# Create 2D array (T x S x J) of average annual SocSec benefits for s>=44 by
+# cohort (t) and lifetime income group (j). The value over an individual's
+# lifetime will be constant (in the diagonals)
+def create_avg_ann_lftm_ssben(ss_ben_arr, p):
+    lambda_arr = np.tile(
+        p.lambdas.flatten().reshape(1, 1, p.J), (p.T + p.S - 1, p.S, 1)
+    )
+    omega_arr = np.tile(
+        p.omega[:-1, :].reshape(p.T + p.S -1, p.S, 1), (1, 1, p.J)
+    )
+    # Extend ss_ben_arr to be T+S-1 x S x J by adding S-1 rows, repeating last row
+    ss_ben_arr = np.vstack(
+        (ss_ben_arr, np.tile(ss_ben_arr[-1, :, :], (p.S - 1, 1, 1)))
+    )
+    pop_arr = omega_arr * lambda_arr
+    ss_ben_pop_arr = ss_ben_arr * pop_arr
+    avg_ann_lftm_ssben = np.zeros((p.T, p.S, p.J))
+    for t in range(p.T):
+        for j in range(p.J):
+            if t == 0:  # Fill in all the incomplete lifetimes in t=0
+                for s in range(1, p.S + 1):
+                    # print(f"t={t}, j={j}, s={s}")
+                    if s == 1:  # Age 100 in t=0
+                        bnft_age_mask = [True]
+                        avg_ann_lftm_ssben[t, p.S - s, j] = (
+                            ss_ben_pop_arr[t, p.S - s, j] /
+                            pop_arr[t, p.S - s, j]
+                        )
+                    else:  # Ages 21-99 in t=0
+                        bnft_age_mask = np.arange(p.S - s, p.S) >= p.retire[t]
+                        avg_ann_lftm_ssben[t:t + s, p.S-s:][
+                            np.eye(s, dtype=bool)
+                        ] = (
+                            (bnft_age_mask * np.diagonal(
+                                ss_ben_pop_arr[t:t+s, -s:, j]
+                            )).sum() /
+                            (bnft_age_mask * np.diagonal(
+                                pop_arr[t:t+s, -s:, j]
+                            )).sum()
+                        )
+            elif t >= 1 and t <= p.T - p.S:  # Fill in complete lifetimes
+                # print(f"t={t}, j={j}, s={p.S}")
+                bnft_age_mask = np.arange(p.S) >= p.retire[t]
+                avg_ann_lftm_ssben[t:t + p.S, :, j][
+                    np.eye(p.S, dtype=bool)
+                ] = (
+                    (bnft_age_mask * np.diagonal(
+                        ss_ben_pop_arr[t:t+p.S, :, j]
+                    )).sum() /
+                    (bnft_age_mask * np.diagonal(pop_arr[t:t+p.S, :, j])).sum()
+                )
+            else:
+                # print(f"t={t}, j={j}, s={p.T - t}")
+                bnft_age_mask = np.arange(p.S) >= p.retire[t]
+                avg_ann_lftm_ssben[t:, :p.T - t, j][
+                    np.eye(p.T - t, dtype=bool)
+                ] = (
+                    (bnft_age_mask * np.diagonal(
+                        ss_ben_pop_arr[t:t+p.S, :, j]
+                    )).sum() /
+                    (bnft_age_mask * np.diagonal(pop_arr[t:t+p.S, :, j])).sum()
+                )
+
+    return avg_ann_lftm_ssben
 
 
 def create_crfb_outputs(
@@ -276,11 +343,7 @@ def create_crfb_outputs(
     # Want the following output variables: tax paid, benefits, income, consumption
     # scale by pct of benefits in the baseline
     # find array that is the pension amount in the baseline (T x S x J)
-    pension_baseline = (
-        base_tpi["etr"] * base_tpi["before_tax_income"]
-        - base_tpi["hh_taxes"]
-        - base_tpi["tr"]
-    )
+    pension_baseline = base_tpi["pension_benefits"]
     # make sure no negative pensions
     pension_baseline[pension_baseline < 0] = 0
     # Make a DataFrame that is in a long panel format: year, age, J, pension, income, consumption, tax paid
@@ -310,46 +373,66 @@ def create_crfb_outputs(
         {
             "Year": year_grid.flatten(),
             "Age": age_grid.flatten(),
-            "J": J_grid.flatten(),
+            "Lifetime Income Group": J_grid.flatten(),
         }
     )
     # put consumption into dataframe
+    base_dist_df["Average Annual Benefits"] = create_avg_ann_lftm_ssben(
+        base_tpi["pension_benefits"], base_params
+    ).flatten()
     base_dist_df["Consumption"] = base_tpi["c"].flatten()
     base_dist_df["Income"] = base_tpi["before_tax_income"].flatten()
     base_dist_df["Income and Payroll Tax Paid"] = (
-        base_tpi["hh_taxes"] + pension_baseline + base_tpi["tr"]
+        base_tpi["income_payroll_taxes"]
     ).flatten()
     base_dist_df["Pension"] = pension_baseline.flatten()
     # update J to be the J_map
-    base_dist_df["J"] = base_dist_df["J"].map(J_map)
+    base_dist_df["Lifetime Income Group"] = base_dist_df["Lifetime Income Group"].map(J_map)
     # repeat for reform
     reform_dist_df = pd.DataFrame(
         {
             "Year": year_grid.flatten(),
             "Age": age_grid.flatten(),
-            "J": J_grid.flatten(),
+            "Lifetime Income Group": J_grid.flatten(),
         }
     )
     reform_dist_df["Consumption"] = reform_tpi["c"].flatten()
     reform_dist_df["Income"] = reform_tpi["before_tax_income"].flatten()
-    pension_reform = (
-        reform_tpi["etr"] * reform_tpi["before_tax_income"]
-        - reform_tpi["hh_taxes"]
-        - reform_tpi["tr"]
-    )
+    pension_reform = reform_tpi["pension_benefits"]
     pension_reform[pension_reform < 0] = 0
     reform_dist_df["Income and Payroll Tax Paid"] = (
-        reform_tpi["hh_taxes"] + pension_reform + reform_tpi["tr"]
+        reform_tpi["income_payroll_taxes"]
     ).flatten()
     reform_dist_df["Pension"] = pension_reform.flatten()
-    reform_dist_df["J"] = reform_dist_df["J"].map(J_map)
+    reform_dist_df["Lifetime Income Group"] = reform_dist_df["Lifetime Income Group"].map(J_map)
+
+    # Make plots of percentage changes in distributional variables
+    plot_vars = ["Consumption", "Income", "Income and Payroll Tax Paid", "Pension"]
+    for var in plot_vars:
+        filename = os.path.join(plot_path, f"{var}_pct_change{suffix}.png")
+        cp.plot_dist_pct_changes(
+            base_dist_df,
+            reform_dist_df,
+            70,  # plot for 70 year olds
+            var,
+            CRFB_END_YEAR,
+            filename=filename,
+        )
 
     # keep just year <= 2100
     base_dist_df = base_dist_df[base_dist_df["Year"] <= CRFB_END_YEAR]
     reform_dist_df = reform_dist_df[reform_dist_df["Year"] <= CRFB_END_YEAR]
+    # scale everything by pct of average annual benefits in the baseline
+    for var in ["Consumption", "Income", "Income and Payroll Tax Paid", "Pension"]:
+        base_dist_df[var] = base_dist_df[var] / base_dist_df[
+            "Average Annual Benefits"
+        ]
+        reform_dist_df[var] = reform_dist_df[var] / base_dist_df[
+            "Average Annual Benefits"
+        ]
     # save to csv
     base_dist_df.to_csv(
-        os.path.join(SAVE_DIR, "base_distribution.csv"), index=False
+        os.path.join(SAVE_DIR, "distribution_baseline.csv"), index=False
     )
     reform_dist_df.to_csv(
         os.path.join(SAVE_DIR, f"distribution{suffix}.csv"), index=False
