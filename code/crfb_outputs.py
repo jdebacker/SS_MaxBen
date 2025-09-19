@@ -39,10 +39,14 @@ OASDI_RATIO = 12.4 / 16.2  # This is OASDI taxes to total payroll taxes
 
 # Read in model output, put reforms in dictionary
 base_params = safe_read_pickle(
-    os.path.join(CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA_tg1_40", "model_params.pkl")
+    os.path.join(
+        CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA_tg1_40", "model_params.pkl"
+    )
 )
 base_tpi = safe_read_pickle(
-    os.path.join(CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA_tg1_40", "TPI", "TPI_vars.pkl")
+    os.path.join(
+        CUR_DIR, "OUTPUT_BASELINE_POSTOBBBA_tg1_40", "TPI", "TPI_vars.pkl"
+    )
 )
 simulations = {
     "2056 Trigger": {
@@ -148,7 +152,7 @@ def create_avg_ann_lftm_ssben(ss_ben_arr, p):
         p.lambdas.flatten().reshape(1, 1, p.J), (p.T + p.S - 1, p.S, 1)
     )
     omega_arr = np.tile(
-        p.omega[:-1, :].reshape(p.T + p.S -1, p.S, 1), (1, 1, p.J)
+        p.omega[:-1, :].reshape(p.T + p.S - 1, p.S, 1), (1, 1, p.J)
     )
     # Extend ss_ben_arr to be T+S-1 x S x J by adding S-1 rows, repeating last row
     ss_ben_arr = np.vstack(
@@ -165,43 +169,42 @@ def create_avg_ann_lftm_ssben(ss_ben_arr, p):
                     if s == 1:  # Age 100 in t=0
                         bnft_age_mask = [True]
                         avg_ann_lftm_ssben[t, p.S - s, j] = (
-                            ss_ben_pop_arr[t, p.S - s, j] /
-                            pop_arr[t, p.S - s, j]
+                            ss_ben_pop_arr[t, p.S - s, j]
+                            / pop_arr[t, p.S - s, j]
                         )
                     else:  # Ages 21-99 in t=0
                         bnft_age_mask = np.arange(p.S - s, p.S) >= p.retire[t]
-                        avg_ann_lftm_ssben[t:t + s, p.S-s:][
+                        avg_ann_lftm_ssben[t : t + s, p.S - s :][
                             np.eye(s, dtype=bool)
                         ] = (
-                            (bnft_age_mask * np.diagonal(
-                                ss_ben_pop_arr[t:t+s, -s:, j]
-                            )).sum() /
-                            (bnft_age_mask * np.diagonal(
-                                pop_arr[t:t+s, -s:, j]
-                            )).sum()
-                        )
+                            bnft_age_mask
+                            * np.diagonal(ss_ben_pop_arr[t : t + s, -s:, j])
+                        ).sum() / (
+                            bnft_age_mask
+                            * np.diagonal(pop_arr[t : t + s, -s:, j])
+                        ).sum()
             elif t >= 1 and t <= p.T - p.S:  # Fill in complete lifetimes
                 # print(f"t={t}, j={j}, s={p.S}")
                 bnft_age_mask = np.arange(p.S) >= p.retire[t]
-                avg_ann_lftm_ssben[t:t + p.S, :, j][
+                avg_ann_lftm_ssben[t : t + p.S, :, j][
                     np.eye(p.S, dtype=bool)
                 ] = (
-                    (bnft_age_mask * np.diagonal(
-                        ss_ben_pop_arr[t:t+p.S, :, j]
-                    )).sum() /
-                    (bnft_age_mask * np.diagonal(pop_arr[t:t+p.S, :, j])).sum()
-                )
+                    bnft_age_mask
+                    * np.diagonal(ss_ben_pop_arr[t : t + p.S, :, j])
+                ).sum() / (
+                    bnft_age_mask * np.diagonal(pop_arr[t : t + p.S, :, j])
+                ).sum()
             else:
                 # print(f"t={t}, j={j}, s={p.T - t}")
                 bnft_age_mask = np.arange(p.S) >= p.retire[t]
-                avg_ann_lftm_ssben[t:, :p.T - t, j][
+                avg_ann_lftm_ssben[t:, : p.T - t, j][
                     np.eye(p.T - t, dtype=bool)
                 ] = (
-                    (bnft_age_mask * np.diagonal(
-                        ss_ben_pop_arr[t:t+p.S, :, j]
-                    )).sum() /
-                    (bnft_age_mask * np.diagonal(pop_arr[t:t+p.S, :, j])).sum()
-                )
+                    bnft_age_mask
+                    * np.diagonal(ss_ben_pop_arr[t : t + p.S, :, j])
+                ).sum() / (
+                    bnft_age_mask * np.diagonal(pop_arr[t : t + p.S, :, j])
+                ).sum()
 
     return avg_ann_lftm_ssben
 
@@ -331,6 +334,15 @@ def create_crfb_outputs(
         df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
     # Keep just to 2100
     df = df[df["Year"] <= CRFB_END_YEAR]
+    # Keep just some columns
+    cols_to_keep = [
+        "Year",
+        "SSTF Revenues, Current Law",
+        "SSTF Outlays, Current Law",
+        "SSTF Revenues, Cap",
+        "SSTF Outlays, Cap",
+    ]
+    df = df[cols_to_keep]
     # Save to CSV for CRFB
     df.to_csv(
         os.path.join(SAVE_DIR, f"SSTF_balances{suffix}.csv"), index=False
@@ -387,7 +399,9 @@ def create_crfb_outputs(
     ).flatten()
     base_dist_df["Pension"] = pension_baseline.flatten()
     # update J to be the J_map
-    base_dist_df["Lifetime Income Group"] = base_dist_df["Lifetime Income Group"].map(J_map)
+    base_dist_df["Lifetime Income Group"] = base_dist_df[
+        "Lifetime Income Group"
+    ].map(J_map)
     # repeat for reform
     reform_dist_df = pd.DataFrame(
         {
@@ -404,10 +418,17 @@ def create_crfb_outputs(
         reform_tpi["income_payroll_taxes"]
     ).flatten()
     reform_dist_df["Pension"] = pension_reform.flatten()
-    reform_dist_df["Lifetime Income Group"] = reform_dist_df["Lifetime Income Group"].map(J_map)
+    reform_dist_df["Lifetime Income Group"] = reform_dist_df[
+        "Lifetime Income Group"
+    ].map(J_map)
 
     # Make plots of percentage changes in distributional variables
-    plot_vars = ["Consumption", "Income", "Income and Payroll Tax Paid", "Pension"]
+    plot_vars = [
+        "Consumption",
+        "Income",
+        "Income and Payroll Tax Paid",
+        "Pension",
+    ]
     for var in plot_vars:
         filename = os.path.join(plot_path, f"{var}_pct_change{suffix}.png")
         cp.plot_dist_pct_changes(
@@ -423,13 +444,18 @@ def create_crfb_outputs(
     base_dist_df = base_dist_df[base_dist_df["Year"] <= CRFB_END_YEAR]
     reform_dist_df = reform_dist_df[reform_dist_df["Year"] <= CRFB_END_YEAR]
     # scale everything by pct of average annual benefits in the baseline
-    for var in ["Consumption", "Income", "Income and Payroll Tax Paid", "Pension"]:
-        base_dist_df[var] = base_dist_df[var] / base_dist_df[
-            "Average Annual Benefits"
-        ]
-        reform_dist_df[var] = reform_dist_df[var] / base_dist_df[
-            "Average Annual Benefits"
-        ]
+    for var in [
+        "Consumption",
+        "Income",
+        "Income and Payroll Tax Paid",
+        "Pension",
+    ]:
+        base_dist_df[var] = (
+            base_dist_df[var] / base_dist_df["Average Annual Benefits"]
+        )
+        reform_dist_df[var] = (
+            reform_dist_df[var] / base_dist_df["Average Annual Benefits"]
+        )
     # save to csv
     base_dist_df.to_csv(
         os.path.join(SAVE_DIR, "distribution_baseline.csv"), index=False

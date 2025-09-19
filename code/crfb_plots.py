@@ -6,11 +6,11 @@ px.defaults.template = "plotly_white"
 
 def SSTF_plot(df, filename=None):
     plot_vars = [
-            "SSTF_Revenues_base",
-            "SSTF_Outlays_base",
-            "SSTF_Revenues_cbo",
-            "SSTF_Outlays_cbo",
-        ]
+        "SSTF_Revenues_base",
+        "SSTF_Outlays_base",
+        "SSTF_Revenues_cbo",
+        "SSTF_Outlays_cbo",
+    ]
     # put in pct by multiply by 100
     for var in plot_vars:
         df[var] = 100 * df[var]
@@ -56,8 +56,11 @@ def SSTF_plot(df, filename=None):
 
 def plot_fiscal(df, end_year=2054, filename=None):
     plot_vars = [
-            "PayrollTax/Y_base", "IIT/Y_base", "PayrollTax/Y_cbo", "IIT/Y_cbo"
-        ]
+        "PayrollTax/Y_base",
+        "IIT/Y_base",
+        "PayrollTax/Y_cbo",
+        "IIT/Y_cbo",
+    ]
     # put in pct by multiply by 100
     for var in plot_vars:
         df[var] = 100 * df[var]
@@ -104,9 +107,7 @@ def plot_debt(df, end_year=2054, filename=None):
     for var in plot_vars:
         df[var] = 100 * df[var]
     # Plot D/Y from CBO and baseline
-    fig = px.line(
-        df[df["Year"] <= end_year], x="Year", y=plot_vars
-    )
+    fig = px.line(df[df["Year"] <= end_year], x="Year", y=plot_vars)
     # Update each trace with custom colors and line styles
     for trace in fig.data:
         trace_name = trace.name
@@ -140,7 +141,10 @@ def plot_debt(df, end_year=2054, filename=None):
 
 def plot_rev_spend(df, end_year=2054, filename=None):
     plot_vars = [
-        "Rev/Y_base", "TotalSpend/Y_base", "Rev/Y_cbo", "TotalSpend/Y_cbo"
+        "Rev/Y_base",
+        "TotalSpend/Y_base",
+        "Rev/Y_cbo",
+        "TotalSpend/Y_cbo",
     ]
     for var in plot_vars:
         df[var] = 100 * df[var]
@@ -282,15 +286,15 @@ def plot_macros(macro_df, end_year=2100, filename=None):
 def plot_sstf_cbo(df, filename=None):
     plot_vars = [
         "SSTF_Revenues_base",
-            "SSTF_Outlays_base",
-            "SSTF_Revenues_cbo",
-            "SSTF_Outlays_cbo",
-            "SSTF_Revenues_reform",
-            "SSTF_Outlays_reform",
+        "SSTF_Outlays_base",
+        "SSTF_Revenues_cbo",
+        "SSTF_Outlays_cbo",
+        "SSTF_Revenues_reform",
+        "SSTF_Outlays_reform",
     ]
     for var in plot_vars:
         df[var] = 100 * df[var]
-     # Plot D/Y from CBO and baseline
+    # Plot D/Y from CBO and baseline
     fig = px.line(
         df,
         x="Year",
@@ -335,11 +339,11 @@ def plot_sstf_cbo(df, filename=None):
 
 def plot_sstf_revenues_outlays(df, filename=None):
     plot_vars = [
-            "SSTF Revenues, Cap",
-            "SSTF Outlays, Cap",
-            "SSTF Revenues, Current Law",
-            "SSTF Outlays, Current Law",
-        ]
+        "SSTF Revenues, Cap",
+        "SSTF Outlays, Cap",
+        "SSTF Revenues, Current Law",
+        "SSTF Outlays, Current Law",
+    ]
     # plot cbo and model output
     fig = px.line(
         df,
@@ -379,7 +383,14 @@ def plot_sstf_revenues_outlays(df, filename=None):
         fig.show()
 
 
-def plot_dist_pct_changes(base_dist_df, reform_dist_df, age=70, var="Consumption", endyear=2100, filename=None):
+def plot_dist_pct_changes(
+    base_dist_df,
+    reform_dist_df,
+    age=70,
+    var="Consumption",
+    endyear=2100,
+    filename=None,
+):
     """
     Plots the time series of percentage changes between baseline and
     reform for `var` in a plot with lines for each lifetime income
@@ -400,13 +411,15 @@ def plot_dist_pct_changes(base_dist_df, reform_dist_df, age=70, var="Consumption
     base_dist_df = base_dist_df[base_dist_df["Age"] == age]
     reform_dist_df = reform_dist_df[reform_dist_df["Age"] == age]
     # create pct change columns for each lifetime income group
-    reform_dist_df["pct_diff"] = ((reform_dist_df[var] - base_dist_df[var]) / base_dist_df[var]) * 100
+    reform_dist_df["pct_diff"] = (
+        (reform_dist_df[var] - base_dist_df[var]) / base_dist_df[var]
+    ) * 100
     fig = px.line(
         reform_dist_df[reform_dist_df["Year"] <= endyear],
         x="Year",
         y="pct_diff",
         color="Lifetime Income Group",
-        title=f"Percentage Changes in {var} by Lifetime Income Group, for Age {age}"
+        title=f"Percentage Changes in {var} by Lifetime Income Group, for Age {age}",
     )
     fig.update_yaxes(title_text="Percent Change")
     if filename is not None:
