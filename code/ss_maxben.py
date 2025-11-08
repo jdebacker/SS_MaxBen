@@ -14,7 +14,6 @@ import copy
 import argparse
 from pathlib import Path
 from taxcalc import Calculator
-import matplotlib.pyplot as plt
 from ogusa.calibrate import Calibration
 from ogcore.parameters import Specifications
 from ogcore import output_tables as ot
@@ -23,13 +22,6 @@ from ogcore.execute import runner
 from ogcore.utils import safe_read_pickle
 import logging
 
-
-# Use a custom matplotlib style file for plots
-style_file_url = (
-    "https://raw.githubusercontent.com/PSLmodels/OG-Core/"
-    + "master/ogcore/OGcorePlots.mplstyle"
-)
-plt.style.use(style_file_url)
 
 
 def main():
@@ -103,79 +95,8 @@ def main():
     updated_params = {
         "start_year": 2026,
         "RC_TPI": 100 * 1e-4,
-        "initial_debt_ratio": 1.01727,
-        "alpha_T": np.array(
-            [
-                8.685,
-                8.713,
-                8.519,
-                8.82,
-                8.804,
-                8.839,
-                8.915,
-                8.974,
-                9.022,
-                9.109,
-                9.184,
-                9.256,
-                9.332,
-                9.405,
-                9.47,
-                9.537,
-                9.597,
-                9.652,
-                9.700,
-                9.744,
-                9.787,
-                9.823,
-                9.858,
-                9.889,
-                9.917,
-                9.944,
-                9.967,
-                9.986,
-                10.001,
-                10.017,
-            ]
-        )
-        / 100,
-        "alpha_G": np.array(
-            [
-                6.053,
-                5.996,
-                5.914,
-                5.816,
-                5.731,
-                5.637,
-                5.54,
-                5.453,
-                5.365,
-                5.284,
-                5.212,
-                5.16,
-                5.126,
-                5.11,
-                5.11,
-                5.11,
-                5.11,
-                5.11,
-                5.11,
-                5.11,
-                5.11,
-            ]
-        )
-        * 0.975
-        / 100,
-        "cit_rate": [
-            [0.260],
-            [0.255],
-            [0.250],
-            [0.245],
-            [0.240],
-            [0.235],
-            [0.230],
-        ],
-        "debt_ratio_ss": 1.90,
+        "tG1": 40,
+        "debt_ratio_ss": 2.55,
         "etr_params": etr_list,
         "mtrx_params": mtrx_list,
         "mtry_params": mtry_list,
@@ -186,7 +107,7 @@ def main():
     # Run model
     start_time = time.time()
     client = Client(n_workers=num_workers, threads_per_worker=1)
-    # runner(p, time_path=False, client=client)
+    runner(p, time_path=False, client=client)
     print("run time = ", time.time() - start_time)
     client.close()
     del client
@@ -213,11 +134,7 @@ def main():
     ) as f:
         replacement_rate_adjust = json.load(f)
     p2.update_specifications(replacement_rate_adjust)
-    # p2.update_specifications({
-    #     "reform_use_baseline_solution": False,
-    #     "initial_guess_r_SS": 0.04,
-    #     "initial_guess_TR_SS": 0.03
-    # })
+
     # Run model
     start_time = time.time()
     client = Client(n_workers=num_workers)
