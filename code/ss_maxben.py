@@ -94,7 +94,7 @@ def main():
     )
     d = c.get_dict()
     # Adjust estimated tax functions to have higher scale
-    pct = 0.02
+    pct = 0.04
     etr_arr = np.array(d["etr_params"], dtype=np.float64)
     mtrx_arr = np.array(d["mtrx_params"], dtype=np.float64)
     mtry_arr = np.array(d["mtry_params"], dtype=np.float64)
@@ -127,10 +127,11 @@ def main():
         "e": d["e"]
     }
     p.update_specifications(updated_params)
-    # Run model
-    start_time = time.time()
-    runner(p, time_path=True, client=client)
-    print("run time = ", time.time() - start_time)
+    # # Run model
+    # start_time = time.time()
+    # runner(p, time_path=True, client=client)
+    # print("run time = ", time.time() - start_time)
+
 
     """
     ---------------------------------------------------------------------------
@@ -138,7 +139,7 @@ def main():
     ---------------------------------------------------------------------------
     """
     # create new Specifications object for reform simulation
-    p2 = copy.deepcopy(p)
+    p2 = p
     p2.baseline = False
     p2.output_base = reform_dir1
     # Use calibration class to estimate reform tax functions from
@@ -154,10 +155,11 @@ def main():
     ) as f:
         replacement_rate_adjust = json.load(f)
     p2.update_specifications(replacement_rate_adjust)
+    p2.reform_use_baseline_solution = False
 
     # Run model
     start_time = time.time()
-    runner(p2, time_path=True, client=client)
+    # runner(p2, time_path=True, client=client)
     print("run time = ", time.time() - start_time)
 
     """
@@ -185,7 +187,7 @@ def main():
 
     # Run model
     start_time = time.time()
-    runner(p2, time_path=True, client=client)
+    # runner(p2, time_path=True, client=client)
     print("run time = ", time.time() - start_time)
 
     """
