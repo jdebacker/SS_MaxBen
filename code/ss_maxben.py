@@ -23,7 +23,6 @@ from ogcore.utils import safe_read_pickle
 import logging
 
 
-
 def main():
     # Define parameters to use for multiprocessing
     num_workers = min(multiprocessing.cpu_count(), 7)
@@ -114,14 +113,13 @@ def main():
         "labor_income_tax_noncompliance_rate": [[0.0]],
         "capital_income_tax_noncompliance_rate": [[0.0]],
         "eta_RM": np.ones((p.T, p.S)),
-        "e": d["e"]
+        "e": d["e"],
     }
     p.update_specifications(updated_params)
     # # Run model
     # start_time = time.time()
     # runner(p, time_path=True, client=client)
     # print("run time = ", time.time() - start_time)
-
 
     """
     ---------------------------------------------------------------------------
@@ -243,12 +241,8 @@ def main():
     Save some results of simulations
     ---------------------------------------------------------------------------
     """
-    base_tpi = safe_read_pickle(
-        os.path.join(base_dir, "TPI", "TPI_vars.pkl")
-    )
-    base_params = safe_read_pickle(
-        os.path.join(base_dir, "model_params.pkl")
-    )
+    base_tpi = safe_read_pickle(os.path.join(base_dir, "TPI", "TPI_vars.pkl"))
+    base_params = safe_read_pickle(os.path.join(base_dir, "model_params.pkl"))
     reform_tpi = safe_read_pickle(
         os.path.join(reform_dir1, "TPI", "TPI_vars.pkl")
     )

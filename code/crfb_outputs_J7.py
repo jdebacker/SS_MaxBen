@@ -39,31 +39,27 @@ OASDI_RATIO = 12.4 / 16.2  # This is OASDI taxes to total payroll taxes
 
 # Read in model output, put reforms in dictionary
 base_dir = os.path.join(
-        CUR_DIR, "..", "Results_2025-12-03", "Baseline_2025-12-03"
-    )
-base_params = safe_read_pickle(
-    os.path.join(
-        base_dir, "model_params.pkl"
-    )
+    CUR_DIR, "..", "Results_2025-12-03", "Baseline_2025-12-03"
 )
-base_tpi = safe_read_pickle(
-    os.path.join(
-        base_dir, "TPI", "TPI_vars.pkl"
-    )
-)
+base_params = safe_read_pickle(os.path.join(base_dir, "model_params.pkl"))
+base_tpi = safe_read_pickle(os.path.join(base_dir, "TPI", "TPI_vars.pkl"))
 simulations = {
     "2061 Trigger": {
         "params": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "..", "Results_2025-12-03", "reform_trigger2061_2025-12-03",
+                "..",
+                "Results_2025-12-03",
+                "reform_trigger2061_2025-12-03",
                 "model_params.pkl",
             )
         ),
         "tp_vars": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "..", "Results_2025-12-03", "reform_trigger2061_2025-12-03",
+                "..",
+                "Results_2025-12-03",
+                "reform_trigger2061_2025-12-03",
                 "TPI",
                 "TPI_vars.pkl",
             )
@@ -74,14 +70,18 @@ simulations = {
         "params": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "..", "Results_2025-12-03", "reform_trigger2056_2025-12-03",
+                "..",
+                "Results_2025-12-03",
+                "reform_trigger2056_2025-12-03",
                 "model_params.pkl",
             )
         ),
         "tp_vars": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "..", "Results_2025-12-03", "reform_trigger2056_2025-12-03",
+                "..",
+                "Results_2025-12-03",
+                "reform_trigger2056_2025-12-03",
                 "TPI",
                 "TPI_vars.pkl",
             )
@@ -92,14 +92,18 @@ simulations = {
         "params": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "..", "Results_2025-12-03", "reform_trigger2046_2025-12-03",
+                "..",
+                "Results_2025-12-03",
+                "reform_trigger2046_2025-12-03",
                 "model_params.pkl",
             )
         ),
         "tp_vars": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "..", "Results_2025-12-03", "reform_trigger2046_2025-12-03",
+                "..",
+                "Results_2025-12-03",
+                "reform_trigger2046_2025-12-03",
                 "TPI",
                 "TPI_vars.pkl",
             )
@@ -110,14 +114,18 @@ simulations = {
         "params": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-               "..", "Results_2025-12-03", "reform_trigger2026_2025-12-03",
+                "..",
+                "Results_2025-12-03",
+                "reform_trigger2026_2025-12-03",
                 "model_params.pkl",
             )
         ),
         "tp_vars": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "..", "Results_2025-12-03", "reform_trigger2026_2025-12-03",
+                "..",
+                "Results_2025-12-03",
+                "reform_trigger2026_2025-12-03",
                 "TPI",
                 "TPI_vars.pkl",
             )
@@ -495,16 +503,26 @@ def create_crfb_outputs(
     reform_dist_df = reform_dist_df.drop(columns=["Age"])
     # keep just pension amount
     base_dist_df = base_dist_df[["Year", "Lifetime Income Group", "Pension"]]
-    reform_dist_df = reform_dist_df[["Year", "Lifetime Income Group", "Pension"]]
+    reform_dist_df = reform_dist_df[
+        ["Year", "Lifetime Income Group", "Pension"]
+    ]
     # sum across ages
-    base_dist_df = pd.DataFrame(base_dist_df.groupby(["Year", "Lifetime Income Group"]).sum()).reset_index()
-    reform_dist_df = pd.DataFrame(reform_dist_df.groupby(["Year", "Lifetime Income Group"]).sum()).reset_index()
+    base_dist_df = pd.DataFrame(
+        base_dist_df.groupby(["Year", "Lifetime Income Group"]).sum()
+    ).reset_index()
+    reform_dist_df = pd.DataFrame(
+        reform_dist_df.groupby(["Year", "Lifetime Income Group"]).sum()
+    ).reset_index()
     # Find total reduction in pension by year and Lifetime Income Group
     base_dist_df["Savings"] = 0
-    reform_dist_df["Savings"] = reform_dist_df["Pension"] - base_dist_df["Pension"]
+    reform_dist_df["Savings"] = (
+        reform_dist_df["Pension"] - base_dist_df["Pension"]
+    )
     # collapse top 1% and top 10%
     top10_list = ["90-99%", "Top 1%"]
-    top10 = base_dist_df[base_dist_df["Lifetime Income Group"].isin(top10_list)]
+    top10 = base_dist_df[
+        base_dist_df["Lifetime Income Group"].isin(top10_list)
+    ]
     # collapse by top 10%
     top10 = pd.DataFrame(top10.groupby(["Year"]).sum()).reset_index()
     all = pd.DataFrame(base_dist_df.groupby(["Year"]).sum()).reset_index()
@@ -512,12 +530,18 @@ def create_crfb_outputs(
     all["Lifetime Income Group"] = "All"
     # append together with original dataframe
     # drop the 90-99% group
-    base_dist_df = base_dist_df[~base_dist_df["Lifetime Income Group"].isin([top10_list[0]])]
+    base_dist_df = base_dist_df[
+        ~base_dist_df["Lifetime Income Group"].isin([top10_list[0]])
+    ]
     base_dist_df = pd.concat([base_dist_df, top10, all])
     # sort by year and Lifetime Income Group
-    base_dist_df = base_dist_df.sort_values(by=["Year", "Lifetime Income Group"])
+    base_dist_df = base_dist_df.sort_values(
+        by=["Year", "Lifetime Income Group"]
+    )
     # collapse top 1% and top 10%
-    top10 = reform_dist_df[reform_dist_df["Lifetime Income Group"].isin(top10_list)]
+    top10 = reform_dist_df[
+        reform_dist_df["Lifetime Income Group"].isin(top10_list)
+    ]
     # collapse by top 10%
     top10 = pd.DataFrame(top10.groupby(["Year"]).sum()).reset_index()
     all = pd.DataFrame(reform_dist_df.groupby(["Year"]).sum()).reset_index()
@@ -525,22 +549,34 @@ def create_crfb_outputs(
     all["Lifetime Income Group"] = "All"
     # append together with original dataframe
     # drop the 90-99% group
-    reform_dist_df = reform_dist_df[~reform_dist_df["Lifetime Income Group"].isin([top10_list[0]])]
+    reform_dist_df = reform_dist_df[
+        ~reform_dist_df["Lifetime Income Group"].isin([top10_list[0]])
+    ]
     reform_dist_df = pd.concat([reform_dist_df, top10, all])
     # sort by year and Lifetime Income Group
-    reform_dist_df = reform_dist_df.sort_values(by=["Year", "Lifetime Income Group"])
+    reform_dist_df = reform_dist_df.sort_values(
+        by=["Year", "Lifetime Income Group"]
+    )
     # compute percentage reduction in benefits
     reform_dist_df["Percent Benefits Affected by Cap"] = 0
-    reform_dist_df["Percent Benefits Affected by Cap"] = 1 - reform_dist_df["Pension"] / base_dist_df["Pension"]
+    reform_dist_df["Percent Benefits Affected by Cap"] = (
+        1 - reform_dist_df["Pension"] / base_dist_df["Pension"]
+    )
     # compute percentage of savings
     base_dist_df["Percent of Savings"] = 0
     # create pct of savings by dividing savings by total savings in that year
     # Keep just the "All" group to compute total savings by year
     df = reform_dist_df[reform_dist_df["Lifetime Income Group"] == "All"]
-    total_savings_by_year = pd.DataFrame(df.groupby("Year")["Savings"].sum()).reset_index()
-    total_savings_by_year.rename(columns={"Savings": "Total Savings"}, inplace=True)
+    total_savings_by_year = pd.DataFrame(
+        df.groupby("Year")["Savings"].sum()
+    ).reset_index()
+    total_savings_by_year.rename(
+        columns={"Savings": "Total Savings"}, inplace=True
+    )
     reform_dist_df = pd.merge(reform_dist_df, total_savings_by_year, on="Year")
-    reform_dist_df["Percent of Savings"] = reform_dist_df["Savings"] / reform_dist_df["Total Savings"]
+    reform_dist_df["Percent of Savings"] = (
+        reform_dist_df["Savings"] / reform_dist_df["Total Savings"]
+    )
     reform_dist_df.drop(columns=["Total Savings"], inplace=True)
     # scale everything by pct of average annual benefits in the baseline
     # NOTE: not doing this now because don't have easy easy want to get average annual beenfits for these groupings
@@ -558,10 +594,12 @@ def create_crfb_outputs(
     #     )
     # save to csv
     base_dist_df.to_csv(
-        os.path.join(SAVE_DIR, "Age65plus_distribution_baseline.csv"), index=False
+        os.path.join(SAVE_DIR, "Age65plus_distribution_baseline.csv"),
+        index=False,
     )
     reform_dist_df.to_csv(
-        os.path.join(SAVE_DIR, f"Age65plus_distribution{suffix}.csv"), index=False
+        os.path.join(SAVE_DIR, f"Age65plus_distribution{suffix}.csv"),
+        index=False,
     )
 
 
