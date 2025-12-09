@@ -75,7 +75,7 @@ del WAGE_GROWTH_RATES["Unnamed: 0"]
 END_YEAR = 2100  # final year to grow out to
 BENEFIT_TRIGGER_PCT = 0.25
 MAX_AGE = 85  # in simulated panel, this is age at which SS benefits end
-TRIGGER_YEAR = 2043
+TRIGGER_YEAR = 2058
 J = 7
 
 # Fill in inflation rates and wage growth rates to END_YEAR if not present

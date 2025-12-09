@@ -52,18 +52,36 @@ base_tpi = safe_read_pickle(
     )
 )
 simulations = {
-    "2056 Trigger": {
+    "2061 Trigger": {
         "params": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "..", "Results_2025-12-03", "Baseline_2025-12-03",
+                "..", "Results_2025-12-03", "reform_trigger2061_2025-12-03",
                 "model_params.pkl",
             )
         ),
         "tp_vars": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
-                "..", "Results_2025-12-03", "Baseline_2025-12-03",
+                "..", "Results_2025-12-03", "reform_trigger2061_2025-12-03",
+                "TPI",
+                "TPI_vars.pkl",
+            )
+        ),
+        "suffix": "_2061",
+    },
+    "2056 Trigger": {
+        "params": safe_read_pickle(
+            os.path.join(
+                CUR_DIR,
+                "..", "Results_2025-12-03", "reform_trigger2056_2025-12-03",
+                "model_params.pkl",
+            )
+        ),
+        "tp_vars": safe_read_pickle(
+            os.path.join(
+                CUR_DIR,
+                "..", "Results_2025-12-03", "reform_trigger2056_2025-12-03",
                 "TPI",
                 "TPI_vars.pkl",
             )

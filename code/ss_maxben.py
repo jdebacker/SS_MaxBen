@@ -37,6 +37,7 @@ def main():
     reform_dir1 = os.path.join(save_dir, "reform_trigger2026_2025-12-03")
     reform_dir2 = os.path.join(save_dir, "reform_trigger2046_2025-12-03")
     reform_dir3 = os.path.join(save_dir, "reform_trigger2056_2025-12-03")
+    reform_dir4 = os.path.join(save_dir, "reform_trigger2061_2025-12-03")
     json_dir = os.path.join(main_dir, "json")
     # tmd_dir = (
     #     "/Users/richardevans/Docs/Economics/OSE/microsim/" +
@@ -64,12 +65,6 @@ def main():
         "ogusa", "ogusa_default_parameters.json"
     ) as file:
         defaults = json.load(file)
-    # defaults["replacement_rate_adjust"] = [[1.0]]
-    # defaults["J"] = 7
-    # defaults["lambdas"] = [0.25, 0.25, 0.2, 0.1, 0.1, 0.09, 0.01]
-    # defaults["beta_annual"] = [0.91, 0.91, 0.92, 0.93, 0.95, 0.965, 0.98]
-    # defaults["labor_income_tax_noncompliance_rate"] = [[0.0]]
-    # defaults["capital_income_tax_noncompliance_rate"] = [[0.0]]
     p.update_specifications(defaults)
     p.tax_func_type = "HSV"
     p.age_specific = True
@@ -77,11 +72,6 @@ def main():
     p.J = 7
     p.lambdas = np.array([0.25, 0.25, 0.2, 0.1, 0.1, 0.09, 0.01])
     p.beta = np.array([0.91, 0.91, 0.92, 0.93, 0.95, 0.965, 0.98])
-    # defaults["labor_income_tax_noncompliance_rate"] = [[0.0]]
-    # defaults["capital_income_tax_noncompliance_rate"] = [[0.0]]
-    # p.replacement_rate_adjust = np.ones((p.T + p.S, p.S))
-    # p.labor_income_tax_noncompliance_rate = np.zeros((p.T + p.S, p.J))
-    # p.capital_income_tax_noncompliance_rate = np.zeros((p.T + p.S, p.J))
 
     c = Calibration(
         p,
@@ -168,7 +158,7 @@ def main():
     ---------------------------------------------------------------------------
     """
     # create new Specifications object for reform simulation
-    p2 = copy.deepcopy(p)
+    p2 = p
     p2.baseline = False
     p2.output_base = reform_dir2
     # Use calibration class to estimate reform tax functions from
@@ -196,7 +186,7 @@ def main():
     ---------------------------------------------------------------------------
     """
     # create new Specifications object for reform simulation
-    p2 = copy.deepcopy(p)
+    p2 = p
     p2.baseline = False
     p2.output_base = reform_dir3
     # Use calibration class to estimate reform tax functions from
@@ -215,8 +205,37 @@ def main():
 
     # Run model
     start_time = time.time()
+    # runner(p2, time_path=True, client=client)
+    print("run time = ", time.time() - start_time)
+
+    """
+    ---------------------------------------------------------------------------
+    Run reform policy
+    ---------------------------------------------------------------------------
+    """
+    # create new Specifications object for reform simulation
+    p2 = p
+    p2.baseline = False
+    p2.output_base = reform_dir4
+    # Use calibration class to estimate reform tax functions from
+    # Tax-Calculator, specifying reform for Tax-Calculator in iit_reform
+
+    # Read in replacement rate json
+    with open(
+        os.path.join(
+            json_dir,
+            "maxben_replacement_rate_adjust_100k50k_nonconstant_rates_trigger2061_J7.json",
+        ),
+        "r",
+    ) as f:
+        replacement_rate_adjust = json.load(f)
+    p2.update_specifications(replacement_rate_adjust)
+
+    # Run model
+    start_time = time.time()
     runner(p2, time_path=True, client=client)
     print("run time = ", time.time() - start_time)
+
     client.close()
 
     """
