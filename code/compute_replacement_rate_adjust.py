@@ -58,16 +58,30 @@ BENEFIT_CAP_COUPLES = 100_000  # Nominal cap on benefits
 BENEFIT_CAP_SINGLES = 50_000  # Nominal cap on benefits
 INFLATION_RATE = 0.02  # Assumed inflation rate, affects benefit growth
 WAGE_GROWTH_RATE = 0.04  # Assumed annual growth rate wages, applies to AIME and the benefit cap (after trigger)
+# Read in CBO forecasts for inflation and wage growth
+cbo_rates_path = os.path.join(cur_dir, "..", "data", "CBO_price_changes.xlsx")
+cbo_rates_df = pd.read_excel(cbo_rates_path, sheet_name="Sheet1")
+INFLATION_RATES = cbo_rates_df.T.to_dict()[1]  # CPI-U
+del INFLATION_RATES["Unnamed: 0"]  # remove entry
+# Put inflation rates in decimal form
+for k in INFLATION_RATES.keys():
+    INFLATION_RATES[k] /= 100.0
+    # subtract 0.003 to get chained CPI-U
+    INFLATION_RATES[k] -= 0.003
+WAGE_GROWTH_RATES = cbo_rates_df.T.to_dict()[3]
+del WAGE_GROWTH_RATES["Unnamed: 0"]
 # this growth rate should be come combination of inflation for COLA adjustments
 # and real wage growth for new beneficiaries
 END_YEAR = 2100  # final year to grow out to
-PHASE_OUT_RATE = (
-    0.02  # number of years to phase out replacement rate adjustment
-)
-PHASE_OUT_YEARS = 150
 BENEFIT_TRIGGER_PCT = 0.25
 MAX_AGE = 85  # in simulated panel, this is age at which SS benefits end
-TRIGGER_YEAR = 2043
+TRIGGER_YEAR = 2023
+
+# Fill in inflation rates and wage growth rates to END_YEAR if not present
+last_inflation_year = max(INFLATION_RATES.keys())
+for y in range(last_inflation_year + 1, END_YEAR + 1):
+    INFLATION_RATES[y] = INFLATION_RATES[last_inflation_year]
+    WAGE_GROWTH_RATES[y] = WAGE_GROWTH_RATES[last_inflation_year]
 
 out_dict = {
     "year": [],
@@ -161,20 +175,19 @@ for y in range(2023, END_YEAR + 1):
     df_existing = df_existing[df_existing["A_AGE"] <= MAX_AGE]
 
     # Assume new claimants' benefits grow at the wage rate
-    df_new["HSSVAL"] *= 1 + WAGE_GROWTH_RATE
+    df_new["HSSVAL"] *= 1 + WAGE_GROWTH_RATES[y]
     # existing beneficiaries grow at the inflation rate
-    df_existing["HSSVAL"] *= 1 + INFLATION_RATE
+    df_existing["HSSVAL"] *= 1 + INFLATION_RATES[y]
     # append the new claimants onto the existing dataframe
     df_existing = pd.concat([df_existing, df_new], ignore_index=True).copy()
 
     # after trigger year, grow cap at wage index
     if y > trigger_year:
-        cap_singles *= 1 + WAGE_GROWTH_RATE
-        cap_couples *= 1 + WAGE_GROWTH_RATE
+        # cap_singles *= 1 + WAGE_GROWTH_RATES[y]
+        # cap_couples *= 1 + WAGE_GROWTH_RATES[y]
         # comment 2 above and uncomment 2 below for Option 1
-        # cap_singles *= 1 + INFLATION_RATE
-        # cap_couples *= 1 + INFLATION_RATE
-
+        cap_singles *= 1 + INFLATION_RATES[y]
+        cap_couples *= 1 + INFLATION_RATES[y]
 
 # %%
 # turn to df
@@ -184,13 +197,6 @@ out_df = pd.DataFrame.from_dict(out_dict)
 a = out_df[
     ["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"]
 ].values
-# add to a: have values linearly go back down to zero over next PHASE_OUT years
-# for i in range(1, PHASE_OUT + 1):
-#     a = np.append(a, (a[-1, :] * (1 - i / PHASE_OUT)).reshape(1, 7), axis=0)
-# Smooth phase out (not linear)
-# for i in range(1, PHASE_OUT_YEARS + 1):
-#     a = np.append(a, (a[-1, :] / (1 + PHASE_OUT_RATE)).reshape(1, 7), axis=0)
-
 # append 3 columns with same values as last column
 # this is because we are using OG-Core with J=10
 a = np.append(a, np.tile(a[:, -1].reshape(a.shape[0], 1), (1, 3)), axis=1)
@@ -201,7 +207,7 @@ a_dict = {"replacement_rate_adjust": a.tolist()}
 # do one minus the fraction capped to get the replacement_rate_adjust parameter
 # save to json
 with open(
-    f"maxben_replacement_rate_adjust_100k50k_trigger{TRIGGER_YEAR}.json",
+    f"maxben_replacement_rate_adjust_100k50k_nonconstant_rates_trigger{TRIGGER_YEAR}.json",
     "w",
 ) as f:
     json.dump(a_dict, f)
