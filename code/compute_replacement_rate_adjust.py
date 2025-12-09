@@ -75,7 +75,8 @@ del WAGE_GROWTH_RATES["Unnamed: 0"]
 END_YEAR = 2100  # final year to grow out to
 BENEFIT_TRIGGER_PCT = 0.25
 MAX_AGE = 85  # in simulated panel, this is age at which SS benefits end
-TRIGGER_YEAR = 2023
+TRIGGER_YEAR = 2058
+J = 7
 
 # Fill in inflation rates and wage growth rates to END_YEAR if not present
 last_inflation_year = max(INFLATION_RATES.keys())
@@ -183,11 +184,11 @@ for y in range(2023, END_YEAR + 1):
 
     # after trigger year, grow cap at wage index
     if y > trigger_year:
-        # cap_singles *= 1 + WAGE_GROWTH_RATES[y]
-        # cap_couples *= 1 + WAGE_GROWTH_RATES[y]
+        cap_singles *= 1 + WAGE_GROWTH_RATES[y]
+        cap_couples *= 1 + WAGE_GROWTH_RATES[y]
         # comment 2 above and uncomment 2 below for Option 1
-        cap_singles *= 1 + INFLATION_RATES[y]
-        cap_couples *= 1 + INFLATION_RATES[y]
+        # cap_singles *= 1 + INFLATION_RATES[y]
+        # cap_couples *= 1 + INFLATION_RATES[y]
 
 # %%
 # turn to df
@@ -198,8 +199,13 @@ a = out_df[
     ["0-25", "25-50", "50-70", "70-80", "80-90", "90-99", "99-100"]
 ].values
 # append 3 columns with same values as last column
-# this is because we are using OG-Core with J=10
-a = np.append(a, np.tile(a[:, -1].reshape(a.shape[0], 1), (1, 3)), axis=1)
+if J == 10:
+    # this is because we are using OG-Core with J=10
+    a = np.append(a, np.tile(a[:, -1].reshape(a.shape[0], 1), (1, 3)), axis=1)
+elif J == 7:
+    pass
+else:
+    raise ValueError("J must be 7 or 10 for this code.")
 # appends one row of all 0 to make sure back to SS value
 # a = np.append(a, np.zeros((1, 10)), axis=0)
 a = 1 - a
@@ -207,7 +213,7 @@ a_dict = {"replacement_rate_adjust": a.tolist()}
 # do one minus the fraction capped to get the replacement_rate_adjust parameter
 # save to json
 with open(
-    f"maxben_replacement_rate_adjust_100k50k_nonconstant_rates_trigger{TRIGGER_YEAR}.json",
+    f"maxben_replacement_rate_adjust_100k50k_nonconstant_rates_trigger{TRIGGER_YEAR}_J{J}.json",
     "w",
 ) as f:
     json.dump(a_dict, f)

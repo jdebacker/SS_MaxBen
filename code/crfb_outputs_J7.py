@@ -27,7 +27,7 @@ import crfb_plots as cp
 # set current directory
 CUR_DIR = os.path.dirname(os.path.realpath(__file__))
 # set directory to save tables to
-SAVE_DIR = os.path.join(CUR_DIR, "..", "CRFB_outputs_2025-11-15")
+SAVE_DIR = os.path.join(CUR_DIR, "..", "CRFB_outputs_2025-12-03")
 plot_path = os.path.join(SAVE_DIR, "plots")
 # make directory if it doesn't exist
 os.makedirs(SAVE_DIR, exist_ok=True)
@@ -39,36 +39,18 @@ OASDI_RATIO = 12.4 / 16.2  # This is OASDI taxes to total payroll taxes
 
 # Read in model output, put reforms in dictionary
 base_dir = os.path.join(
-    CUR_DIR, "..", "Results_2025-11-15", "Baseline_2025-11-10"
+    CUR_DIR, "..", "Results_2025-12-03", "Baseline_2025-12-03"
 )
 base_params = safe_read_pickle(os.path.join(base_dir, "model_params.pkl"))
 base_tpi = safe_read_pickle(os.path.join(base_dir, "TPI", "TPI_vars.pkl"))
 simulations = {
-    # "2056 Trigger": {
-    #     "params": safe_read_pickle(
-    #         os.path.join(
-    #             CUR_DIR,
-    #             "..", "Results_2025-11-15", "Baseline_2025-11-10",
-    #             "model_params.pkl",
-    #         )
-    #     ),
-    #     "tp_vars": safe_read_pickle(
-    #         os.path.join(
-    #             CUR_DIR,
-    #             "..", "Results_2025-11-15", "Baseline_2025-11-10",
-    #             "TPI",
-    #             "TPI_vars.pkl",
-    #         )
-    #     ),
-    #     "suffix": "_2056",
-    # },
-    "2046 Trigger": {
+    "2061 Trigger": {
         "params": safe_read_pickle(
             os.path.join(
                 CUR_DIR,
                 "..",
-                "Results_2025-11-15",
-                "reform_trigger2046_2025-11-10",
+                "Results_2025-12-03",
+                "reform_trigger2061_2025-12-03",
                 "model_params.pkl",
             )
         ),
@@ -76,8 +58,52 @@ simulations = {
             os.path.join(
                 CUR_DIR,
                 "..",
-                "Results_2025-11-15",
-                "reform_trigger2046_2025-11-10",
+                "Results_2025-12-03",
+                "reform_trigger2061_2025-12-03",
+                "TPI",
+                "TPI_vars.pkl",
+            )
+        ),
+        "suffix": "_2061",
+    },
+    "2056 Trigger": {
+        "params": safe_read_pickle(
+            os.path.join(
+                CUR_DIR,
+                "..",
+                "Results_2025-12-03",
+                "reform_trigger2056_2025-12-03",
+                "model_params.pkl",
+            )
+        ),
+        "tp_vars": safe_read_pickle(
+            os.path.join(
+                CUR_DIR,
+                "..",
+                "Results_2025-12-03",
+                "reform_trigger2056_2025-12-03",
+                "TPI",
+                "TPI_vars.pkl",
+            )
+        ),
+        "suffix": "_2056",
+    },
+    "2046 Trigger": {
+        "params": safe_read_pickle(
+            os.path.join(
+                CUR_DIR,
+                "..",
+                "Results_2025-12-03",
+                "reform_trigger2046_2025-12-03",
+                "model_params.pkl",
+            )
+        ),
+        "tp_vars": safe_read_pickle(
+            os.path.join(
+                CUR_DIR,
+                "..",
+                "Results_2025-12-03",
+                "reform_trigger2046_2025-12-03",
                 "TPI",
                 "TPI_vars.pkl",
             )
@@ -89,8 +115,8 @@ simulations = {
             os.path.join(
                 CUR_DIR,
                 "..",
-                "Results_2025-11-15",
-                "reform_trigger2026_2025-11-10",
+                "Results_2025-12-03",
+                "reform_trigger2026_2025-12-03",
                 "model_params.pkl",
             )
         ),
@@ -98,8 +124,8 @@ simulations = {
             os.path.join(
                 CUR_DIR,
                 "..",
-                "Results_2025-11-15",
-                "reform_trigger2026_2025-11-10",
+                "Results_2025-12-03",
+                "reform_trigger2026_2025-12-03",
                 "TPI",
                 "TPI_vars.pkl",
             )
@@ -369,10 +395,7 @@ def create_crfb_outputs(
         3: "70-80%",
         4: "80-90%",
         5: "90-99%",
-        6: "99-99.5%",
-        7: "99.5-99.9%",
-        8: "99.9-99.99%",
-        9: "Top 0.01%",
+        6: "Top 1%",
     }
     # create dataframe with columns year, age, J
     # year is 2026-2100
@@ -496,30 +519,21 @@ def create_crfb_outputs(
         reform_dist_df["Pension"] - base_dist_df["Pension"]
     )
     # collapse top 1% and top 10%
-    top10_list = [
-        "90-99%",
-        "99-99.5%",
-        "99.5-99.9%",
-        "99.9-99.99%",
-        "Top 0.01%",
-    ]
-    top1_list = ["99-99.5%", "99.5-99.9%", "99.9-99.99%", "Top 0.01%"]
+    top10_list = ["90-99%", "Top 1%"]
     top10 = base_dist_df[
         base_dist_df["Lifetime Income Group"].isin(top10_list)
     ]
-    top1 = base_dist_df[base_dist_df["Lifetime Income Group"].isin(top1_list)]
     # collapse by top 10%
     top10 = pd.DataFrame(top10.groupby(["Year"]).sum()).reset_index()
-    top1 = pd.DataFrame(top1.groupby(["Year"]).sum()).reset_index()
     all = pd.DataFrame(base_dist_df.groupby(["Year"]).sum()).reset_index()
     top10["Lifetime Income Group"] = "Top 10%"
-    top1["Lifetime Income Group"] = "Top 1%"
     all["Lifetime Income Group"] = "All"
     # append together with original dataframe
+    # drop the 90-99% group
     base_dist_df = base_dist_df[
-        ~base_dist_df["Lifetime Income Group"].isin(top10_list)
+        ~base_dist_df["Lifetime Income Group"].isin([top10_list[0]])
     ]
-    base_dist_df = pd.concat([base_dist_df, top10, top1, all])
+    base_dist_df = pd.concat([base_dist_df, top10, all])
     # sort by year and Lifetime Income Group
     base_dist_df = base_dist_df.sort_values(
         by=["Year", "Lifetime Income Group"]
@@ -528,21 +542,17 @@ def create_crfb_outputs(
     top10 = reform_dist_df[
         reform_dist_df["Lifetime Income Group"].isin(top10_list)
     ]
-    top1 = reform_dist_df[
-        reform_dist_df["Lifetime Income Group"].isin(top1_list)
-    ]
     # collapse by top 10%
     top10 = pd.DataFrame(top10.groupby(["Year"]).sum()).reset_index()
-    top1 = pd.DataFrame(top1.groupby(["Year"]).sum()).reset_index()
     all = pd.DataFrame(reform_dist_df.groupby(["Year"]).sum()).reset_index()
     top10["Lifetime Income Group"] = "Top 10%"
-    top1["Lifetime Income Group"] = "Top 1%"
     all["Lifetime Income Group"] = "All"
     # append together with original dataframe
+    # drop the 90-99% group
     reform_dist_df = reform_dist_df[
-        ~reform_dist_df["Lifetime Income Group"].isin(top10_list)
+        ~reform_dist_df["Lifetime Income Group"].isin([top10_list[0]])
     ]
-    reform_dist_df = pd.concat([reform_dist_df, top10, top1, all])
+    reform_dist_df = pd.concat([reform_dist_df, top10, all])
     # sort by year and Lifetime Income Group
     reform_dist_df = reform_dist_df.sort_values(
         by=["Year", "Lifetime Income Group"]
@@ -555,8 +565,10 @@ def create_crfb_outputs(
     # compute percentage of savings
     base_dist_df["Percent of Savings"] = 0
     # create pct of savings by dividing savings by total savings in that year
+    # Keep just the "All" group to compute total savings by year
+    df = reform_dist_df[reform_dist_df["Lifetime Income Group"] == "All"]
     total_savings_by_year = pd.DataFrame(
-        reform_dist_df.groupby("Year")["Savings"].sum()
+        df.groupby("Year")["Savings"].sum()
     ).reset_index()
     total_savings_by_year.rename(
         columns={"Savings": "Total Savings"}, inplace=True
